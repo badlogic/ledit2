@@ -122,6 +122,18 @@
     .md blockquote {
         @apply border-l-2 border-primary pl-2;
     }
+
+    reddit-post .md pre {
+        overflow: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    reddit-post .md code {
+        font-family: var(--font-family-code);
+        font-size: 0.8em;
+        line-height: 1em;
+    }
 }
 
 @layer utilities {

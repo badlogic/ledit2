@@ -11,8 +11,10 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
 import videojs from "video.js";
+import { Store } from "../utils/store.js";
 
-function renderRedditTextContent(content: string) {
+function renderRedditTextContent(content?: string) {
+    if (!content) return html`${nothing}`;
     return html`<div class="flex flex-col gap-2">
         <div id="selfpost">${unsafeHTML(unescapeHtml(content))}</div>
     </div>`;
@@ -418,7 +420,11 @@ export class RedditPage extends LitElement {
 
         const stream = dom(html`<reddit-stream-view .stream=${new RedditStream(this.subreddit, this.sorting)}></reddit-stream-view>`);
 
-        return html`<div class="${pageContainerStyle}">${renderTopbar("r/" + this.subreddit, closeButton(), sorting)} ${stream}</div> `;
+        const subreddit = Store.getSubreddits()!.find((sub) => sub.subreddits.join("+") == this.subreddit);
+
+        return html`<div class="${pageContainerStyle}">
+            ${renderTopbar("r/" + (subreddit ? subreddit.label : this.subreddit), closeButton(), sorting)} ${stream}
+        </div> `;
     }
 }
 
