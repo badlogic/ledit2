@@ -34,10 +34,9 @@ export class Store {
         settings.subreddits = settings.subreddits ?? [
             // prettier-ignore
             { label: "ledit_mix", subreddits: ["AdviceAnimals", "AskReddit", "askscience", "assholedesign", "aww", "battlestations", "bestof", "BetterEveryLoop", "blackmagicfuckery", "boardgames", "BuyItForLife", "Damnthatsinteresting", "dataisbeautiful", "DesignDesign", "DIY", "diyelectronics", "DrugNerds", "europe", "explainlikeimfive", "facepalm", "fatFIRE", "fightporn", "Fitness", "funny", "Futurology", "gadgets", "gaming", "GifRecipes", "gifs", "GiftIdeas", "history", "homeautomation", "Hue", "IAmA", "IllegalLifeProTips", "INEEEEDIT", "instant_regret", "interestingasfuck", "InternetIsBeautiful", "Jokes", "JusticeServed", "kitchens", "LifeProTips", "maybemaybemaybe", "mildlyinfuriating", "mildlyinteresting", "mildlyvagina", "movies", "news", "NintendoSwitch", "nottheonion", "oddlysatisfying", "OldSchoolCool", "pcmasterrace", "photoshopbattles", "pics", "PoliticalHumor", "ProgrammerHumor", "PublicFreakout", "rarepuppers", "recipes", "rickandmorty", "RoomPorn", "running", "science", "Showerthoughts", "slatestarcodex", "space", "spicy", "technology", "technologyconnections", "television", "therewasanattempt", "todayilearned", "UnethicalLifeProTips", "Unexpected", "UpliftingNews", "videos", "watchpeoplealmostdie", "Wellthatsucks", "Whatcouldgowrong", "whitepeoplegifs", "woahdude", "worldnews", "WTF"] },
-            { label: "videos", subreddits: ["videos"] },
+            { label: "programming", subreddits: ["programming", "programminglanguages"] },
             { label: "gifs", subreddits: ["gifs"] },
             { label: "videos", subreddits: ["videos"] },
-            { label: "malelivingspace", subreddits: ["malelivingspace"] },
         ];
 
         settings.seen = settings.seen ?? [];

@@ -1,6 +1,6 @@
-# app-template
+# ledit2
 
-Used to create new (progressive) web apps and deploy them to a server running Docker and nginx-proxy for SSL cert generation.
+A read-only client for Reddit, Hackernews, lobst.rs, and RSS feeds.
 
 ### Development
 
@@ -11,9 +11,11 @@ Used to create new (progressive) web apps and deploy them to a server running Do
 npm run dev
 ```
 
-In VS Code run the `server` and `client` launch configurations.
+In VS Code run the `dev` launch config to connect to the Node server via the debugger, and spawn a Chrome instance for frontend debugging.
 
 ### Deployment
+
+Deployment is tailored towards my setup, see `publish.sh`. If your setup is similar (VPS/root server + Docker + nginx-proxy + lets-encrypt-companion), then you can modify the `host` and `hostDir` fields in `package.json` to deploy to your own infrastructure.
 
 1. Deploy backend & frontend: `./publish.sh server`
 1. Deploy just the frontend: `./publish.sh`
