@@ -5,12 +5,13 @@ import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit
 import { router } from "../utils/routing.js";
 import { formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { closeButton, dom, fixLinks, onVisibleOnce, renderError, renderTopbar } from "../app.js";
+import { closeButton, dom, fixLinksAndVideos, onVisibleOnce, renderError, renderTopbar } from "../app.js";
 import { replyIcon, speechBubbleIcon } from "../utils/icons.js";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
 import videojs from "video.js";
+import { ImageGallery } from "../utils/imagegallery.js";
 
 function renderRedditTextContent(content: string) {
     return html`<div class="flex flex-col gap-2">
@@ -76,7 +77,13 @@ export function enableYoutubePause(videoElement: HTMLIFrameElement) {
 }
 
 export function renderVideo(videoDesc: { width: number; height: number; urls: string[] }, loop: boolean): HTMLElement {
-    let videoDom = dom(html` <div class="flex justify-center w-full cursor-pointer bg-black">
+    let videoDom = dom(html` <div
+        class="flex justify-center w-full cursor-pointer bg-black"
+        @click=${(ev: Event) => {
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+        }}
+    >
         <video-js controls class="video-js" width=${videoDesc.width} ${loop ? "loop" : ""} data-setup="{}">
             ${map(videoDesc.urls, (url) => html`<source src="${unescapeHtml(url)}" />`)}
         </video-js>
@@ -156,7 +163,7 @@ export class RedditStreamView extends StreamView<RedditPost> {
     }
 
     renderItem(item: RedditPost, polledItems: boolean): TemplateResult {
-        return html`<div class="p-4 border-b border-divider">
+        return html`<div class="py-4 border-b border-divider">
             <reddit-post .post=${item}></reddit-post>
             <div></div>
         </div>`;
@@ -176,14 +183,14 @@ export class RedditPostView extends LitElement {
     }
 
     updated() {
-        fixLinks(this);
+        fixLinksAndVideos(this);
     }
     renderContent(redditPost: RedditPost): TemplateResult | HTMLElement {
         const post = redditPost.data;
 
         // Self post, show text, dim it, cap vertical size, and make it expand on click.
         if (post.is_self) {
-            const selfContent = dom(renderRedditTextContent(post.selftext_html))[0];
+            const selfContent = dom(html`<div class="px-4">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
             onVisibleOnce(selfContent, () => {
                 const maxHeight = 150;
                 if (selfContent.clientHeight > 150) {
@@ -211,24 +218,40 @@ export class RedditPostView extends LitElement {
 
         const postsWidth = document.body.clientWidth > 640 ? 640 : document.body.clientWidth;
 
-        // Gallery
-        /*if (post.is_gallery && post.media_metadata && post.gallery_data) {
-           type image = { x: number; y: number; u: string };
-           const images: image[] = [];
-           for (const imageKey of post.gallery_data.items) {
-              if (post.media_metadata[imageKey.media_id].p) {
-                 let image: image | null = null;
-                 for (const img of post.media_metadata[imageKey.media_id].p) {
-                    image = img;
-                    if (img.x > postsWidth) break;
-                 }
-                 if (image) images.push(image);
-              }
-           }
-           const imageUrls = images.map((img) => htmlDecode(img.u)!);
-           const gallery = renderGallery(imageUrls);
-           return [gallery];
-        }*/
+        // Gallery FIXME label isn't properly aligned
+        if (post.is_gallery && post.media_metadata && post.gallery_data) {
+            type image = { x: number; y: number; u: string };
+            const images: image[] = [];
+            for (const imageKey of post.gallery_data.items) {
+                if (post.media_metadata[imageKey.media_id].p) {
+                    let image: image | null = null;
+                    for (const img of post.media_metadata[imageKey.media_id].p) {
+                        image = img;
+                        if (img.x > postsWidth) break;
+                    }
+                    if (image) images.push(image);
+                }
+            }
+            const imageUrls = images.map((img) => unescapeHtml(img.u)!);
+            const imgDom = dom(html`<div
+                class="relative"
+                @click=${(ev: Event) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    ev.stopImmediatePropagation();
+                    const gallery = dom(html`<image-gallery
+                        .images=${imageUrls.map((url) => {
+                            return { url };
+                        })}
+                    ></image-gallery>`)[0];
+                    router.pushModal(gallery);
+                }}
+            >
+                <img src="${imageUrls[0]}" />
+                <div class="absolute left-0 bottom-0 disable-pointer-events text-xs p-2 bg-[#111]/80 text-white">${imageUrls.length} images</div>
+            </div>`)[0];
+            return imgDom;
+        }
 
         // Reddit hosted video
         if (post.secure_media && post.secure_media.reddit_video) {
@@ -308,8 +331,8 @@ export class RedditPostView extends LitElement {
         return html`<div class="flex flex-col gap-1 cursor-pointer" @click=${() => {
             router.push("/r/comments" + post.permalink);
         }}>
-            <a href="${post.url}" class="text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
-            <div class="flex text-xs text-muted-fg gap-1 break-word">
+            <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
+            <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                 <span>${formatNumber(post.score)} pts</span>
                 <span>•</span>
                 ${
@@ -322,7 +345,7 @@ export class RedditPostView extends LitElement {
                 <span>${getTimeDifference(post.created_utc * 1000)}
             </div>
             <div>${this.renderContent(this.post)}</div>
-            <div class="flex gap-4 items-center -mb-2">
+            <div class="px-4 flex gap-4 items-center -mb-2">
                 <a href="/r/comments${post.permalink}" @click=${(ev: Event) => {
             if (this.noDrillDown) {
                 ev.preventDefault();
@@ -358,7 +381,7 @@ export class RedditPage extends LitElement {
     }
 
     updated() {
-        fixLinks(this);
+        fixLinksAndVideos(this);
     }
 
     render() {
@@ -417,7 +440,7 @@ export class RedditCommentsPage extends LitElement {
     }
 
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
-        fixLinks(this);
+        fixLinksAndVideos(this);
     }
 
     async load() {
@@ -457,7 +480,7 @@ export class RedditCommentsPage extends LitElement {
             ${this.isLoading ? html`<div class="mt-12"><loading-spinner></loading-spinner></div>` : nothing}
             ${this.error ? renderError(this.error) : nothing}
             ${this.post
-                ? html`<reddit-post class="mt-4 pb-4 px-4 border-b border-divider" .post=${this.post} .noDrillDown=${true}></reddit-post>`
+                ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post} .noDrillDown=${true}></reddit-post>`
                 : nothing}
             <div class="px-4">
                 ${this.comments
@@ -498,7 +521,7 @@ export class RedditCommentView extends LitElement {
     }
 
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
-        fixLinks(this);
+        fixLinksAndVideos(this);
     }
 
     render() {

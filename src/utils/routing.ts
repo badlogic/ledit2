@@ -24,6 +24,7 @@ export class Router {
     rootRoute = "/";
     notFoundRoot = "/404";
     currPage = 0;
+    modal?: HTMLElement;
 
     constructor() {
         window.addEventListener("popstate", (ev) => this.handleNavigation(ev));
@@ -75,6 +76,13 @@ export class Router {
             this.navigateTo(path, page);
         }
         this.currPage++;
+    }
+
+    pushModal(modal: HTMLElement) {
+        this.modal = modal;
+        this.currPage++;
+        document.body.append(modal);
+        history.pushState({ page: this.pageStack.length }, "", location.href);
     }
 
     pop() {
@@ -142,6 +150,12 @@ export class Router {
     disableNavigation = false;
     private handleNavigation(ev: PopStateEvent) {
         if (this.disableNavigation) return;
+        if (this.modal) {
+            this.modal.remove();
+            this.modal = undefined;
+            this.currPage = ev.state.page;
+            return;
+        }
         if (ev.state.page > this.currPage || !ev.state) {
             this.currPage = ev.state.page;
             // Forward
