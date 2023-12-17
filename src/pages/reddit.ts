@@ -11,7 +11,6 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
 import videojs from "video.js";
-import { ImageGallery } from "../utils/imagegallery.js";
 
 function renderRedditTextContent(content: string) {
     return html`<div class="flex flex-col gap-2">
@@ -78,7 +77,7 @@ export function enableYoutubePause(videoElement: HTMLIFrameElement) {
 
 export function renderVideo(videoDesc: { width: number; height: number; urls: string[] }, loop: boolean): HTMLElement {
     let videoDom = dom(html` <div
-        class="flex justify-center w-full cursor-pointer bg-black"
+        class="flex justify-center w-full cursor-pointer overflow-x-clip rounded-md"
         @click=${(ev: Event) => {
             ev.stopPropagation();
             ev.stopImmediatePropagation();
@@ -190,7 +189,7 @@ export class RedditPostView extends LitElement {
 
         // Self post, show text, dim it, cap vertical size, and make it expand on click.
         if (post.is_self) {
-            const selfContent = dom(html`<div class="px-4">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
+            const selfContent = dom(html`<div class="px-4 flex flex-col">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
             onVisibleOnce(selfContent, () => {
                 const maxHeight = 150;
                 if (selfContent.clientHeight > 150) {
@@ -217,6 +216,17 @@ export class RedditPostView extends LitElement {
         }
 
         const postsWidth = document.body.clientWidth > 640 ? 640 : document.body.clientWidth;
+        const showGallery = (ev: Event, imageUrls: string[]) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            const gallery = dom(html`<image-gallery
+                .images=${imageUrls.map((url) => {
+                    return { url };
+                })}
+            ></image-gallery>`)[0];
+            router.pushModal(gallery);
+        };
 
         // Gallery FIXME label isn't properly aligned
         if (post.is_gallery && post.media_metadata && post.gallery_data) {
@@ -233,20 +243,7 @@ export class RedditPostView extends LitElement {
                 }
             }
             const imageUrls = images.map((img) => unescapeHtml(img.u)!);
-            const imgDom = dom(html`<div
-                class="relative"
-                @click=${(ev: Event) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    ev.stopImmediatePropagation();
-                    const gallery = dom(html`<image-gallery
-                        .images=${imageUrls.map((url) => {
-                            return { url };
-                        })}
-                    ></image-gallery>`)[0];
-                    router.pushModal(gallery);
-                }}
-            >
+            const imgDom = dom(html`<div class="relative" @click=${(ev: Event) => showGallery(ev, imageUrls)}>
                 <img src="${imageUrls[0]}" />
                 <div class="absolute left-0 bottom-0 disable-pointer-events text-xs p-2 bg-[#111]/80 text-white">${imageUrls.length} images</div>
             </div>`)[0];
@@ -294,7 +291,7 @@ export class RedditPostView extends LitElement {
 
         // Plain old .gif
         if (post.url.endsWith(".gif")) {
-            return dom(html`<img src="${unescapeHtml(post.url)}" />`)[0];
+            return dom(html`<img src="${unescapeHtml(post.url)}" @click=${(ev: Event) => showGallery(ev, [unescapeHtml(post.url)])} /> />`)[0];
         }
 
         // Image, pick the one that's one size above the current posts width so pinch zooming
@@ -306,7 +303,8 @@ export class RedditPostView extends LitElement {
                 if (img.width >= postsWidth) break;
             }
             if (!image) return document.createElement("div");
-            if (!post.preview.reddit_video_preview?.fallback_url) return html`<img src="${unescapeHtml(image.url)}" />`;
+            if (!post.preview.reddit_video_preview?.fallback_url)
+                return html`<img src="${unescapeHtml(image.url)}" @click=${(ev: Event) => showGallery(ev, [unescapeHtml(image!.url)])} />`;
             const video = { width: post.preview.reddit_video_preview.width, height: post.preview.reddit_video_preview.height, urls: [] as string[] };
             if (post.preview.reddit_video_preview.dash_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.dash_url)!);
             if (post.preview.reddit_video_preview.hls_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.hls_url)!);
@@ -318,7 +316,7 @@ export class RedditPostView extends LitElement {
         const missingThumbnailTags = new Set<String>(["self", "nsfw", "default", "image", "spoiler"]);
         const thumbnailUrl = post.thumbnail.includes("://") ? post.thumbnail : "";
         if (post.thumbnail && !missingThumbnailTags.has(post.thumbnail)) {
-            return html`<img src="${unescapeHtml(thumbnailUrl)}" />`;
+            return html`<img src="${unescapeHtml(thumbnailUrl)}" @click=${(ev: Event) => showGallery(ev, [unescapeHtml(thumbnailUrl)])} />`;
         }
         return html`${nothing}`;
     }
@@ -536,7 +534,7 @@ export class RedditCommentView extends LitElement {
             console.log("wat");
         }
         const commentDom = dom(html`<div
-            class="min-w-[300px] flex flex-col cursor-pointer ${this.isRoot ? "mt-4" : "mt-2 ml-2 pl-2 border-l border-divider"}"
+            class="min-w-[300px] flex flex-col cursor-pointer ${this.isRoot ? "mt-4" : "mt-4 ml-2 pl-2 border-l border-divider"}"
         >
             <div class="text-xs flex items-center gap-1">
                 <span class="font-semibold whitespace-nowrap ${this.opAuthor == comment.author ? "text-primary" : ""}">${comment.author}</span>
@@ -553,7 +551,7 @@ export class RedditCommentView extends LitElement {
                     <span class="text-muted-fg whitespace-nowrap">${replies ? replies.data.children.length + " replies" : ""}</span>
                 </div>
             </div>
-            <div class="mt-2">${renderRedditTextContent(comment.body_html)}</div>
+            <div class="">${renderRedditTextContent(comment.body_html)}</div>
             <div id="replies">
                 ${replies
                     ? map(

@@ -783,7 +783,7 @@ export class ImageGallery extends LitElement {
     }
 
     close() {
-        this.remove();
+        router.pop();
     }
 
     scrollNext(ev: MouseEvent) {
