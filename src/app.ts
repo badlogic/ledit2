@@ -52,6 +52,8 @@ export class App extends LitElement {
                 return oldPage.permalink == permalink;
             }
         );
+        router.addRoute("/new/subreddit", () => html`<subreddit-editor></subreddit-editor>`);
+        router.addRoute("/edit/subreddit/:label", () => html`<subreddit-editor></subreddit-editor>`);
 
         router.setRootRoute("/");
         router.setNotFoundRoot("/404");

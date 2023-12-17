@@ -33,6 +33,8 @@ import heartFilledIconSvg from "remixicon/icons/Health & Medical/heart-fill.svg"
 // @ts-ignore
 import editIconSvg from "remixicon/icons/Design/edit-line.svg";
 // @ts-ignore
+import pencilIconSvg from "remixicon/icons/Design/pencil-line.svg";
+// @ts-ignore
 import deleteIconSvg from "remixicon/icons/System/delete-bin-line.svg";
 // @ts-ignore
 import shieldIconSvg from "remixicon/icons/System/shield-keyhole-line.svg";
@@ -169,3 +171,4 @@ export const hdIcon = unsafeHTML(hdIconSvg);
 export const folderIcon = unsafeHTML(folderIconSvg);
 export const playCircleIcon = unsafeHTML(playCircleIconSvg);
 export const playIcon = unsafeHTML(playIconSvg);
+export const pencilIcon = unsafeHTML(pencilIconSvg);

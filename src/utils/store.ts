@@ -8,9 +8,12 @@ export type SynologyPreferences = {
 
 export type Theme = "dark" | "light";
 
+export type Subreddit = { label: string; subreddits: string[] };
+
 export type Settings = {
     theme: Theme;
     devPrefs: DevPreferences;
+    subreddits: Subreddit[];
 };
 
 export type StoreKey = "user" | "settings";
@@ -26,6 +29,15 @@ export class Store {
 
         settings.devPrefs = settings.devPrefs ?? ({} as DevPreferences);
         settings.devPrefs.enabled = settings.devPrefs.enabled ?? false;
+
+        settings.subreddits = settings.subreddits ?? [
+            // prettier-ignore
+            { label: "ledit_mix", subreddits: ["AdviceAnimals", "AskReddit", "askscience", "assholedesign", "aww", "battlestations", "bestof", "BetterEveryLoop", "blackmagicfuckery", "boardgames", "BuyItForLife", "Damnthatsinteresting", "dataisbeautiful", "DesignDesign", "DIY", "diyelectronics", "DrugNerds", "europe", "explainlikeimfive", "facepalm", "fatFIRE", "fightporn", "Fitness", "funny", "Futurology", "gadgets", "gaming", "GifRecipes", "gifs", "GiftIdeas", "history", "homeautomation", "Hue", "IAmA", "IllegalLifeProTips", "INEEEEDIT", "instant_regret", "interestingasfuck", "InternetIsBeautiful", "Jokes", "JusticeServed", "kitchens", "LifeProTips", "maybemaybemaybe", "mildlyinfuriating", "mildlyinteresting", "mildlyvagina", "movies", "news", "NintendoSwitch", "nottheonion", "oddlysatisfying", "OldSchoolCool", "pcmasterrace", "photoshopbattles", "pics", "PoliticalHumor", "ProgrammerHumor", "PublicFreakout", "rarepuppers", "recipes", "rickandmorty", "RoomPorn", "running", "science", "Showerthoughts", "slatestarcodex", "space", "spicy", "technology", "technologyconnections", "television", "therewasanattempt", "todayilearned", "UnethicalLifeProTips", "Unexpected", "UpliftingNews", "videos", "watchpeoplealmostdie", "Wellthatsucks", "Whatcouldgowrong", "whitepeoplegifs", "woahdude", "worldnews", "WTF"] },
+            { label: "videos", subreddits: ["videos"] },
+            { label: "gifs", subreddits: ["gifs"] },
+            { label: "videos", subreddits: ["videos"] },
+            { label: "malelivingspace", subreddits: ["malelivingspace"] },
+        ];
 
         Store.set<Settings>("settings", settings);
     }
@@ -70,6 +82,14 @@ export class Store {
 
     static setDevPrefs(devPrefs: DevPreferences) {
         Store.set("settings", { ...Store.get<Settings>("settings"), devPrefs });
+    }
+
+    static getSubreddits() {
+        return Store.get<Settings>("settings")?.subreddits;
+    }
+
+    static setSubreddits(subreddits: Subreddit[]) {
+        Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, subreddits });
     }
 }
 
