@@ -67,6 +67,7 @@ export class Router {
     }
 
     push(path: string, page?: HTMLElement) {
+        history.pushState({ page: this.pageStack.length }, "", path);
         const route = this.matchRoute(path);
         if (!route) {
             this.navigateTo("/404");
@@ -74,7 +75,6 @@ export class Router {
             this.navigateTo(path, page);
         }
         this.currPage++;
-        history.pushState({ page: this.pageStack.length }, "", path);
     }
 
     pop() {
@@ -175,7 +175,7 @@ export class Router {
     }
 
     private matchRoute(path: string) {
-        path = new URL("https://foo.bar" + path).pathname;
+        path = path.startsWith("http") ? new URL(path).pathname : new URL("https://foo.bar" + path).pathname;
         for (const route of this.routes) {
             const match = route.regexp.exec(path);
             if (match) {
@@ -187,6 +187,21 @@ export class Router {
             }
         }
         return null;
+    }
+
+    getCurrentParams() {
+        const path = new URL(location.href).pathname;
+        for (const route of this.routes) {
+            const match = route.regexp.exec(path);
+            if (match) {
+                const params = new Map<string, string>();
+                route.keys.forEach((key: Key, index) => {
+                    params.set(key.name.toString(), match[index + 1]);
+                });
+                return params;
+            }
+        }
+        return undefined;
     }
 }
 

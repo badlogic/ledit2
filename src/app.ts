@@ -4,6 +4,7 @@ import { i18n } from "./utils/i18n.js";
 import { setupLiveReload } from "./utils/live-reload.js";
 import { renderError } from "./utils/ui-components.js";
 import { router } from "./utils/routing.js";
+import { RedditCommentsPage, RedditPage } from "./pages/reddit.js";
 export * from "./pages/index.js";
 export * from "./utils/ui-components.js";
 
@@ -22,8 +23,35 @@ export class App extends LitElement {
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
         super.firstUpdated(_changedProperties);
         router.addRoute("/", () => html`<main-page></main-page>`);
-        router.addRoute("/404", () => renderError(i18n("Whoops, that page doesn't exist")));
+        router.addRoute(
+            "/404",
+            () =>
+                html`<div class="w-screen h-screen flex items-center justify-center">
+                    <div class="w-[320px]">${renderError(i18n("Whoops, that page doesn't exist"))}</div>
+                </div>`
+        );
         router.addRoute("/settings", () => html`<settings-page></settings-page>`);
+        router.addRoute(
+            "/r/:subreddit/:sorting?",
+            () => html`<reddit-page></reddit-page>`,
+            false,
+            (page) => {
+                const oldPage = page as RedditPage;
+                const params = router.getCurrentParams();
+                const subreddit = params?.get("subreddit");
+                return oldPage.subreddit == subreddit;
+            }
+        );
+        router.addRoute(
+            "/r/comments/r/:subreddit/comments/:id/:title",
+            () => html`<reddit-comments-page></reddit-comments-page>`,
+            false,
+            (page) => {
+                const oldPage = page as RedditCommentsPage;
+                const permalink = RedditCommentsPage.getPermalinkFromHref();
+                return oldPage.permalink == permalink;
+            }
+        );
 
         router.setRootRoute("/");
         router.setNotFoundRoot("/404");

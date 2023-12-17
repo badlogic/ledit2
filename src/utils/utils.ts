@@ -109,3 +109,8 @@ export function isVideoFile(fileName: string): boolean {
 export function getYear(utc: number) {
     return new Date(utc * 1000).getFullYear();
 }
+
+export function unescapeHtml(html: string): string {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return doc.documentElement.textContent || "";
+}

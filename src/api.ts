@@ -56,7 +56,13 @@ export function toUrlBody(params: JsonValue) {
 }
 
 export class Api {
-    static async hello() {
-        return apiGet<{ message: string }>("hello");
+    static async proxyJson<T>(url: string): Promise<T | Error> {
+        try {
+            const response = await apiGet<T>("json?url=" + encodeURIComponent(url));
+            if (response instanceof Error) throw response;
+            return response;
+        } catch (e) {
+            return error("Couldn't proxy json request to " + url, e);
+        }
     }
 }

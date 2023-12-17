@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as http from "http";
 import multer from "multer";
 import WebSocket, { WebSocketServer } from "ws";
+import { error } from "../utils/utils.js";
 const upload = multer({ storage: multer.memoryStorage() });
 
 const port = process.env.PORT ?? 3333;
@@ -22,10 +23,17 @@ const port = process.env.PORT ?? 3333;
     app.use(compression());
     app.use(bodyParser.urlencoded({ extended: true }));
 
-    app.get("/api/hello", (req, res) => {
-        res.json({ message: "Hello world" });
+    app.get("/api/json", async (req, res) => {
+        try {
+            const url = req.query.url as string;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Couldn't fetch " + url);
+            res.json(await response.json());
+        } catch (e) {
+            error("Couldn't JSON proxy " + req.query.url, e);
+            res.status(400).json(e);
+        }
     });
-
     const server = http.createServer(app);
     server.listen(port, async () => {
         console.log(`App listening on port ${port}`);
