@@ -5,7 +5,7 @@ import { closeButton, fixLinksAndVideos, renderError, renderTopbar } from "../ap
 import { i18n } from "../utils/i18n.js";
 import { router } from "../utils/routing.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { minusIcon, pencilIcon, plusIcon, settingsIcon } from "../utils/icons.js";
+import { minusIcon, pencilIcon, plusIcon, searchIcon, settingsIcon } from "../utils/icons.js";
 import { map } from "lit/directives/map.js";
 import { Store, Subreddit } from "../utils/store.js";
 import { state } from "../appstate.js";
@@ -48,10 +48,13 @@ export class MainPage extends LitElement {
                         ><i class="icon w-6 h-6 fill-black dark:fill-white">${settingsIcon}</i></a
                     >
                 </div>
-                <div class="flex flex-col gap-2">
-                    <h2 class="text-muted-fg flex items-center gap-2 pl-4">
+                <div class="flex flex-col">
+                    <h2 class="text-muted-fg flex items-center pl-4">
                         <span>Subreddits</span>
-                        <button class="ml-auto w-10 h-10 flex items-center justify-center" @click=${() => this.newSubreddit()}>
+                        <button class="ml-auto -mr-1 w-10 h-10 flex items-center justify-center" @click=${() => this.search()}>
+                            <i class="icon w-5 h-5 fill-primary">${searchIcon}</i>
+                        </button>
+                        <button class="w-10 h-10 flex items-center justify-center" @click=${() => this.newSubreddit()}>
                             <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
                         </button>
                     </h2>
@@ -87,6 +90,10 @@ export class MainPage extends LitElement {
     deleteSubreddit(subreddit: Subreddit) {
         Store.setSubreddits(Store.getSubreddits()!.filter((other) => other != subreddit));
         state.update("subreddits", Store.getSubreddits()!);
+    }
+
+    search() {
+        router.push("/search/reddit");
     }
 }
 

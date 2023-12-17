@@ -1,12 +1,12 @@
 import { customElement, property } from "lit/decorators.js";
 import { StreamView } from "../utils/streamviews.js";
-import { RedditComment, RedditComments, RedditPost, RedditSorting, RedditStream } from "../apis/reddit.js";
+import { RedditComment, RedditComments, RedditPost, RedditSearchStream, RedditSorting, RedditStream, RedditSubreddit } from "../apis/reddit.js";
 import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit";
 import { router } from "../utils/routing.js";
-import { formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
+import { formatDate, formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
 import { pageContainerStyle } from "../utils/styles.js";
 import { closeButton, dom, fixLinksAndVideos, onVisibleOnce, renderError, renderTopbar } from "../app.js";
-import { replyIcon, speechBubbleIcon } from "../utils/icons.js";
+import { closeIcon, infoIcon, plusIcon, replyIcon, searchIcon, speechBubbleIcon } from "../utils/icons.js";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
@@ -166,7 +166,6 @@ export class RedditStreamView extends StreamView<RedditPost> {
     renderItem(item: RedditPost, polledItems: boolean): TemplateResult {
         return html`<div class="py-4 border-b border-divider">
             <reddit-post .post=${item}></reddit-post>
-            <div></div>
         </div>`;
     }
 }
@@ -589,5 +588,145 @@ export class RedditCommentView extends LitElement {
             numRepliesDom!.classList.toggle("hidden");
         });
         return commentDom;
+    }
+}
+
+@customElement("subreddit-view")
+export class SubredditView extends LitElement {
+    @property()
+    subreddit?: RedditSubreddit;
+
+    protected createRenderRoot(): Element | ShadowRoot {
+        return this;
+    }
+
+    protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+        super.updated(_changedProperties);
+        fixLinksAndVideos(this);
+    }
+
+    render() {
+        const sub = this.subreddit;
+        if (!sub) return html`${nothing}`;
+
+        const inBookmark = Store.getSubreddits()?.some((other) => other.subreddits.includes(sub.url.replaceAll("/r/", "")));
+
+        return html`<div class="w-full p-4 border-b border-divider flex">
+            <div class="w-full flex flex-col">
+                <div class="w-full flex items-center">
+                    <a href="${sub.url}" class="truncate">${sub.title}</a>
+                    ${inBookmark
+                        ? nothing
+                        : html`<button class="ml-auto -mr-2 w-10 h-10 flex items-center justify-center" @click=${() => this.newSubreddit()}>
+                              <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
+                          </button>`}
+                </div>
+                <div class="flex gap-2 text-xs text-muted-fg">
+                    <span class="flex gap-2 text-xs text-muted-fg">${sub.url.substring(1)}</span>
+                    <span>${formatNumber(sub.subscribers)} subscribers</span>
+                    <span>${getTimeDifference(sub.created_utc * 1000)}</span>
+                </div>
+                ${renderRedditTextContent(sub.public_description_html)}
+            </div>
+        </div>`;
+    }
+
+    newSubreddit() {
+        const newSubreddit = { label: this.subreddit!.title, subreddits: [this.subreddit!.url.replaceAll("/r/", "")] };
+        const subs = Store.getSubreddits()!;
+        subs.unshift(newSubreddit);
+        Store.setSubreddits(subs);
+        this.requestUpdate();
+    }
+}
+
+@customElement("reddit-search-stream-view")
+export class RedditSearchStreamView extends StreamView<RedditSubreddit> {
+    constructor() {
+        super();
+        this.wrapItem = false;
+    }
+
+    renderItem(item: RedditSubreddit, polledItems: boolean): TemplateResult {
+        return html`<subreddit-view .subreddit=${item}></subreddit-view>`;
+    }
+}
+
+@customElement("subreddit-search")
+export class SubredditSearchPage extends LitElement {
+    @property()
+    results: any[] = [];
+
+    @property()
+    initialQuery = "";
+
+    constructor() {
+        super();
+        const params = router.getCurrentParams();
+        if (params?.has("query")) {
+            this.initialQuery = params.get("query")!;
+        }
+    }
+
+    protected createRenderRoot(): Element | ShadowRoot {
+        return this;
+    }
+
+    protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+        super.firstUpdated(_changedProperties);
+        if (this.initialQuery.length > 0) {
+            this.handleSearch();
+        }
+    }
+
+    protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+        super.updated(_changedProperties);
+        fixLinksAndVideos(this);
+    }
+
+    render() {
+        return html`<div class="${pageContainerStyle}">
+            ${renderTopbar("Search Subreddits", closeButton())}
+            <div class="px-4">
+                <div class="search flex gap-2 px-4">
+                <i class="icon w-5 h-5">${searchIcon}</i>
+                <input id="search" class="flex-grow" placeholder="Topics, keywords, ..." @input=${() => this.handleSearch()} value=${
+            this.initialQuery
+        }/>
+                <button><i class="ml-auto icon w-5 h-5" @click=${() => {
+                    this.querySelector<HTMLInputElement>("#search")!.value = "";
+                    this.handleSearch();
+                }}>${closeIcon}</i></div>
+            </div>
+            </div>
+            <div id="results"></div>
+            <div class="pt-4"><loading-spinner class="hidden"></loading-spinner></div>
+        </div>`;
+    }
+
+    timeoutId = 0;
+    handleSearch() {
+        clearTimeout(this.timeoutId);
+        this.timeoutId = setTimeout(async () => {
+            this.querySelector("loading-spinner")?.classList.remove("hidden");
+            await this.search();
+            this.querySelector("loading-spinner")?.classList.add("hidden");
+        }, 200) as any as number;
+    }
+
+    search() {
+        const results = this.querySelector("#results")!;
+        const query = (this.querySelector<HTMLInputElement>("#search")?.value ?? "").trim();
+        if (query.length == 0) {
+            results.innerHTML = "";
+            router.replaceUrl("/search/reddit");
+            return;
+        }
+
+        const stream = dom(html`<reddit-search-stream-view .stream=${new RedditSearchStream(query)}></reddit-search-stream-view>`)[0];
+        results.innerHTML = "";
+        results.append(stream);
+
+        router.replaceUrl("/search/reddit/" + encodeURIComponent(query));
     }
 }
