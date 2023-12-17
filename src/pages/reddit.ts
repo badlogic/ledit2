@@ -6,7 +6,7 @@ import { router } from "../utils/routing.js";
 import { formatDate, formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
 import { pageContainerStyle } from "../utils/styles.js";
 import { closeButton, dom, fixLinksAndVideos, onVisibleOnce, renderError, renderTopbar } from "../app.js";
-import { closeIcon, infoIcon, plusIcon, replyIcon, searchIcon, speechBubbleIcon } from "../utils/icons.js";
+import { closeIcon, eyeClosedIcon, eyeOpenIcon, infoIcon, plusIcon, replyIcon, searchIcon, speechBubbleIcon } from "../utils/icons.js";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
@@ -158,13 +158,21 @@ export function renderVideo(videoDesc: { width: number; height: number; urls: st
 
 @customElement("reddit-stream-view")
 export class RedditStreamView extends StreamView<RedditPost> {
+    @property()
+    hideSeen = false;
+
     constructor() {
         super();
         this.wrapItem = false;
     }
 
     renderItem(item: RedditPost, polledItems: boolean): TemplateResult {
-        return html`<div class="py-4 border-b border-divider">
+        let hide = "";
+        if (this.hideSeen) {
+            const seen = Store.getSeen();
+            if (seen.has(item.data.id)) hide = "hidden";
+        }
+        return html`<div class="${hide} py-4 border-b border-divider">
             <reddit-post .post=${item}></reddit-post>
         </div>`;
     }
@@ -185,6 +193,21 @@ export class RedditPostView extends LitElement {
     updated() {
         fixLinksAndVideos(this);
     }
+
+    protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+        super.firstUpdated(_changedProperties);
+        onVisibleOnce(
+            this,
+            () => {
+                const seen = new Set<string>(Store.getSeen());
+                seen.add(this.post!.data.id);
+                Store.setSeen(seen);
+            },
+            "0px",
+            0
+        );
+    }
+
     renderContent(redditPost: RedditPost): TemplateResult | HTMLElement {
         const post = redditPost.data;
 
@@ -353,6 +376,7 @@ export class RedditPostView extends LitElement {
                     <span>${post.author}</span>
                     <span>•</span>
                     <span>${getTimeDifference(post.created_utc * 1000)}
+                    <span>${post.id}</span>
                 </div>
             </div>
             <div class="flex items-center justify-center">${this.renderContent(this.post)}</div>
@@ -378,6 +402,9 @@ export class RedditPage extends LitElement {
 
     @property()
     sorting: RedditSorting;
+
+    @property()
+    hideSeen = false;
 
     constructor() {
         super();
@@ -410,19 +437,24 @@ export class RedditPage extends LitElement {
             { label: "Top year", value: "top-year" },
             { label: "Top all time", value: "top-alltime" },
         ];
-        const sorting = html`<select-box
-            class="pl-2 ml-auto rounded"
-            .values=${sortValues}
-            .selected=${this.sorting}
-            .change=${(value: RedditSorting) => (this.sorting = value)}
-        ></select-box>`;
+        const buttons = html`<select-box
+                class="pl-2 ml-auto rounded"
+                .values=${sortValues}
+                .selected=${this.sorting}
+                .change=${(value: RedditSorting) => (this.sorting = value)}
+            ></select-box
+            ><button class="-mr-2 w-10 h-10 flex items-center justify-center" @click=${() => (this.hideSeen = !this.hideSeen)}>
+                <i class="icon w-5 h-5">${!this.hideSeen ? eyeOpenIcon : eyeClosedIcon}</i>
+            </button>`;
 
-        const stream = dom(html`<reddit-stream-view .stream=${new RedditStream(this.subreddit, this.sorting)}></reddit-stream-view>`);
+        const stream = dom(
+            html`<reddit-stream-view .hideSeen=${this.hideSeen} .stream=${new RedditStream(this.subreddit, this.sorting)}></reddit-stream-view>`
+        );
 
         const subreddit = Store.getSubreddits()!.find((sub) => sub.subreddits.join("+") == this.subreddit);
 
         return html`<div class="${pageContainerStyle}">
-            ${renderTopbar("r/" + (subreddit ? subreddit.label : this.subreddit), closeButton(), sorting)} ${stream}
+            ${renderTopbar("r/" + (subreddit ? subreddit.label : this.subreddit), closeButton(), buttons)} ${stream}
         </div> `;
     }
 }

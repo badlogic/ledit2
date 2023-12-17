@@ -14,6 +14,7 @@ export type Settings = {
     theme: Theme;
     devPrefs: DevPreferences;
     subreddits: Subreddit[];
+    seen: string[];
 };
 
 export type StoreKey = "user" | "settings";
@@ -38,6 +39,8 @@ export class Store {
             { label: "videos", subreddits: ["videos"] },
             { label: "malelivingspace", subreddits: ["malelivingspace"] },
         ];
+
+        settings.seen = settings.seen ?? [];
 
         Store.set<Settings>("settings", settings);
     }
@@ -90,6 +93,19 @@ export class Store {
 
     static setSubreddits(subreddits: Subreddit[]) {
         Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, subreddits });
+    }
+
+    static seenSet = new Set<string>();
+    static getSeen() {
+        if (this.seenSet.size == 0) {
+            this.seenSet = new Set<string>(Store.get<Settings>("settings")!.seen);
+        }
+        return this.seenSet;
+    }
+
+    static setSeen(seenSet: Set<string>) {
+        this.seenSet = seenSet;
+        Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, seen: Array.from(seenSet) });
     }
 }
 

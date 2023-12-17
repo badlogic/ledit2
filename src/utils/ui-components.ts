@@ -20,7 +20,7 @@ export function dom(template: TemplateResult, container?: HTMLElement | Document
     return children as HTMLElement[];
 }
 
-export function onVisibleOnce(target: Element, callback: () => void) {
+export function onVisibleOnce(target: Element, callback: () => void, rootMargin = "200px", threshold = 0.01) {
     const observer = new IntersectionObserver(
         (entries) => {
             entries.forEach((entry) => {
@@ -32,8 +32,8 @@ export function onVisibleOnce(target: Element, callback: () => void) {
         },
         {
             root: null,
-            rootMargin: "200px",
-            threshold: 0.01,
+            rootMargin,
+            threshold,
         }
     );
     observer.observe(target);

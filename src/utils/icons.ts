@@ -112,6 +112,10 @@ import folderIconSvg from "remixicon/icons/Document/folder-line.svg";
 import playCircleIconSvg from "remixicon/icons/Media/play-circle-line.svg";
 // @ts-ignore
 import playIconSvg from "remixicon/icons/Media/play-line.svg";
+// @ts-ignore
+import eyeOpenIconSvg from "remixicon/icons/System/eye-line.svg";
+// @ts-ignore
+import eyeClosedIconSvg from "remixicon/icons/System/eye-off-line.svg";
 
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 
@@ -172,3 +176,5 @@ export const folderIcon = unsafeHTML(folderIconSvg);
 export const playCircleIcon = unsafeHTML(playCircleIconSvg);
 export const playIcon = unsafeHTML(playIconSvg);
 export const pencilIcon = unsafeHTML(pencilIconSvg);
+export const eyeOpenIcon = unsafeHTML(eyeOpenIconSvg);
+export const eyeClosedIcon = unsafeHTML(eyeClosedIconSvg);
