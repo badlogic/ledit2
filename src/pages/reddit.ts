@@ -77,7 +77,7 @@ export function enableYoutubePause(videoElement: HTMLIFrameElement) {
 
 export function renderVideo(videoDesc: { width: number; height: number; urls: string[] }, loop: boolean): HTMLElement {
     let videoDom = dom(html` <div
-        class="flex justify-center w-full cursor-pointer overflow-x-clip rounded-md"
+        class="flex justify-center w-full cursor-pointer"
         @click=${(ev: Event) => {
             ev.stopPropagation();
             ev.stopImmediatePropagation();
@@ -304,7 +304,11 @@ export class RedditPostView extends LitElement {
             }
             if (!image) return document.createElement("div");
             if (!post.preview.reddit_video_preview?.fallback_url)
-                return html`<img src="${unescapeHtml(image.url)}" @click=${(ev: Event) => showGallery(ev, [unescapeHtml(image!.url)])} />`;
+                return html`<img
+                    class="max-h-[30vh]"
+                    src="${unescapeHtml(image.url)}"
+                    @click=${(ev: Event) => showGallery(ev, [unescapeHtml(image!.url)])}
+                />`;
             const video = { width: post.preview.reddit_video_preview.width, height: post.preview.reddit_video_preview.height, urls: [] as string[] };
             if (post.preview.reddit_video_preview.dash_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.dash_url)!);
             if (post.preview.reddit_video_preview.hls_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.hls_url)!);
@@ -316,7 +320,13 @@ export class RedditPostView extends LitElement {
         const missingThumbnailTags = new Set<String>(["self", "nsfw", "default", "image", "spoiler"]);
         const thumbnailUrl = post.thumbnail.includes("://") ? post.thumbnail : "";
         if (post.thumbnail && !missingThumbnailTags.has(post.thumbnail)) {
-            return html`<img src="${unescapeHtml(thumbnailUrl)}" @click=${(ev: Event) => showGallery(ev, [unescapeHtml(thumbnailUrl)])} />`;
+            return html`
+                <img
+                    class="max-h-[30vh]"
+                    src="${unescapeHtml(thumbnailUrl)}"
+                    @click=${(ev: Event) => showGallery(ev, [unescapeHtml(thumbnailUrl)])}
+                />
+            `;
         }
         return html`${nothing}`;
     }
@@ -329,20 +339,22 @@ export class RedditPostView extends LitElement {
         return html`<div class="flex flex-col gap-1 cursor-pointer" @click=${() => {
             router.push("/r/comments" + post.permalink);
         }}>
-            <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
-            <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
-                <span>${formatNumber(post.score)} pts</span>
-                <span>•</span>
-                ${
-                    post.subreddit != params?.get("subreddit")
-                        ? html`<a href="${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
-                        : nothing
-                }
-                <span>${post.author}</span>
-                <span>•</span>
-                <span>${getTimeDifference(post.created_utc * 1000)}
+            <div class="flex flex-col mb-2">
+                <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
+                <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
+                    <span>${formatNumber(post.score)} pts</span>
+                    <span>•</span>
+                    ${
+                        post.subreddit != params?.get("subreddit")
+                            ? html`<a href="${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
+                            : nothing
+                    }
+                    <span>${post.author}</span>
+                    <span>•</span>
+                    <span>${getTimeDifference(post.created_utc * 1000)}
+                </div>
             </div>
-            <div>${this.renderContent(this.post)}</div>
+            <div class="flex items-center justify-center">${this.renderContent(this.post)}</div>
             <div class="px-4 flex gap-4 items-center -mb-2">
                 <a href="/r/comments${post.permalink}" @click=${(ev: Event) => {
             if (this.noDrillDown) {
@@ -473,7 +485,7 @@ export class RedditCommentsPage extends LitElement {
     }
 
     render() {
-        return html`<div class="${pageContainerStyle}">
+        return html`<div class="${pageContainerStyle} overflow-auto">
             ${renderTopbar("Comments", closeButton())}
             ${this.isLoading ? html`<div class="mt-12"><loading-spinner></loading-spinner></div>` : nothing}
             ${this.error ? renderError(this.error) : nothing}

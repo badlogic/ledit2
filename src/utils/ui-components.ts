@@ -649,9 +649,9 @@ export class Topbar extends LitElement {
     render() {
         return html`
             <div
-                class="fixed top-0 z-10 ${this.limitWidth
-                    ? "w-full max-w-[640px]"
-                    : "w-full"} h-10 pr-4 flex items-center bg-[#fff]/60 dark:bg-[#111]/60 backdrop-blur-[8px]"
+                class="fixed top-0 z-10 w-screen ${this.limitWidth
+                    ? "max-w-[640px]"
+                    : ""} h-10 pr-4 flex items-center bg-[#fff]/60 dark:bg-[#111]/60 backdrop-blur-[8px]"
             >
                 <div class="flex-shrink-0">${this.closeButton}</div>
                 ${this.heading instanceof HTMLElement
@@ -665,7 +665,7 @@ export class Topbar extends LitElement {
 }
 
 export function renderPageShell(title: string, content: TemplateResult | HTMLElement, limitWidth = true) {
-    return html`<div class="flex flex-col w-full ${limitWidth ? "max-w-[640px]" : ""} mx-auto min-h-full">
+    return html`<div class="flex flex-col w-full ${limitWidth ? "max-w-[640px]" : ""} mx-auto min-h-full overflow-auto">
         ${renderTopbar(dom(html`<div class="font-semibold whitespace-nowrap overflow-x-auto">${title}</div>`)[0], closeButton(), undefined, true)}
         ${content}
     </div> `;
@@ -734,11 +734,13 @@ export class ImageGallery extends LitElement {
     connectedCallback(): void {
         super.connectedCallback();
         togglePinchZoom(true);
+        document.body.classList.add("overflow-hidden");
     }
 
     disconnectedCallback(): void {
         super.disconnectedCallback();
         togglePinchZoom(false);
+        document.body.classList.remove("overflow-hidden");
     }
 
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
@@ -756,12 +758,12 @@ export class ImageGallery extends LitElement {
     render() {
         return html`
             <div
-                class="fixed scrollbar-hide top-0 left-0 w-full h-full overflow-none flex snap-x overflow-x-auto backdrop-blur z-10 fill-primary"
+                class="fixed scrollbar-hide top-0 left-0 w-full h-full overflow-auto flex backdrop-blur z-10 fill-primary"
                 @click=${() => this.close()}
             >
                 ${this.images.map(
                     (image, index) => html`
-                        <div class="flex-none w-full h-full relative snap-center flex justify-center items-center">
+                        <div class="flex-none w-full h-full relative flex justify-center items-center">
                             ${this.images.length > 1 && index > 0 && !this.isScrolling
                                 ? html`<button @click=${(ev: MouseEvent) =>
                                       this.scrollPrevious(
@@ -774,7 +776,7 @@ export class ImageGallery extends LitElement {
                                           ev
                                       )} class="animate-fade animate-duration-100 absolute right-4 top-4 h-full flex"><i class="icon !w-8 !h-8">${arrowRightIcon}</button>`
                                 : nothing}
-                            <img src="${image.url}" alt="${image.altText ?? ""}" class="max-w-full max-h-full object-contain" />
+                            <img src="${image.url}" alt="${image.altText ?? ""}" class="w-full h-full object-contain" />
                         </div>
                     `
                 )}
@@ -793,7 +795,9 @@ export class ImageGallery extends LitElement {
         const galleryContainer = this.renderRoot.children[0] as HTMLElement;
 
         if (galleryContainer) {
-            galleryContainer.scrollTo({ left: galleryContainer.scrollLeft + galleryContainer.clientWidth, behavior: "smooth" });
+            const scrollDistance =
+                galleryContainer.scrollLeft - (galleryContainer.scrollLeft % galleryContainer.clientWidth) + galleryContainer.clientWidth;
+            galleryContainer.scrollTo({ left: scrollDistance, behavior: "smooth" });
             this.isScrolling = true;
             this.debounceScroll();
         }
@@ -806,7 +810,9 @@ export class ImageGallery extends LitElement {
         const galleryContainer = this.renderRoot.children[0] as HTMLElement;
 
         if (galleryContainer) {
-            galleryContainer.scrollTo({ left: galleryContainer.scrollLeft - galleryContainer.clientWidth, behavior: "smooth" });
+            const scrollDistance =
+                galleryContainer.scrollLeft - (galleryContainer.scrollLeft % galleryContainer.clientWidth) - galleryContainer.clientWidth;
+            galleryContainer.scrollTo({ left: scrollDistance, behavior: "smooth" });
             this.isScrolling = true;
             this.debounceScroll();
         }
