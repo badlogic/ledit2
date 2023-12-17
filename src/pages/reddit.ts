@@ -719,7 +719,7 @@ export class SubredditSearchPage extends LitElement {
     render() {
         return html`<div class="${pageContainerStyle}">
             ${renderTopbar("Search Subreddits", closeButton())}
-            <div class="px-4">
+            <div class="w-full px-4 pt-4">
                 <div class="search flex gap-2 px-4">
                 <i class="icon w-5 h-5">${searchIcon}</i>
                 <input id="search" class="flex-grow" placeholder="Topics, keywords, ..." @input=${() => this.handleSearch()} value=${
@@ -729,7 +729,6 @@ export class SubredditSearchPage extends LitElement {
                     this.querySelector<HTMLInputElement>("#search")!.value = "";
                     this.handleSearch();
                 }}>${closeIcon}</i></div>
-            </div>
             </div>
             <div id="results"></div>
             <div class="pt-4"><loading-spinner class="hidden"></loading-spinner></div>
