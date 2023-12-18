@@ -386,13 +386,16 @@ export class RedditPostView extends LitElement {
         if (!this.post) return html`<div class="mt-12"><loading-spinner></loading-spinner></div>`;
         const params = router.getCurrentParams();
         const post = this.post.data;
-        const content = this.renderContent(this.post);
+        const collapse = Store.getCollapseSeen() && Store.getSeen().has(post.id);
+        const content = collapse ? undefined : this.renderContent(this.post);
 
         return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${(ev: Event) => {
             this.showComments(ev, true);
         }}>
             <div class="flex flex-col ${content ? "mb-2" : ""}">
-                <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
+                <a href="${post.url}" class="px-4 ${collapse ? "text-muted-fg" : "text-black dark:text-white"} font-semibold">${unescapeHtml(
+            post.title
+        )}</a>
                 <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                     <span>${formatNumber(post.score)} pts</span>
                     <span>•</span>
@@ -406,7 +409,7 @@ export class RedditPostView extends LitElement {
                     <span>${getTimeDifference(post.created_utc * 1000)}
                 </div>
             </div>
-            ${content ? html`<div class="flex items-center justify-center w-full">${content}</div>` : nothing}
+            ${content && !collapse ? html`<div class="flex items-center justify-center w-full">${content}</div>` : nothing}
             <div class="px-4 flex gap-4 items-center -mb-2 text-sm">
                 <a href="/r/comments${post.permalink}" @click=${(ev: Event) =>
             this.showComments(ev)} class="text-primary h-8 flex items-center gap-1">
@@ -726,7 +729,7 @@ export class SubredditView extends LitElement {
 
         const inBookmark = Store.getSubreddits()?.some((other) => other.subreddits.includes(sub.url.replaceAll("/r/", "")));
 
-        return html`<div class="w-full p-4 border-b border-divider flex">
+        return html`<div class="w-full p-4 pt-2 border-b border-divider flex">
             <div class="w-full flex flex-col">
                 <div class="w-full flex items-center">
                     <a href="${sub.url}" class="truncate">${sub.title}</a>
@@ -802,12 +805,11 @@ export class SubredditSearchPage extends LitElement {
     render() {
         return html`<div class="${pageContainerStyle}">
             ${renderTopbar("Search Subreddits", closeButton())}
-            <div class="w-full px-4 pt-4">
+            <div class="w-full px-4 pt-2 pb-4 border-b border-divider">
                 <div class="search flex gap-2 px-4">
                 <i class="icon w-5 h-5">${searchIcon}</i>
-                <input id="search" class="flex-grow" placeholder="Topics, keywords, ..." @input=${() => this.handleSearch()} value=${
-            this.initialQuery
-        }/>
+                <input id="search" class="flex-grow bg-none active:bg-none" placeholder="Topics, keywords, ..." @input=${() =>
+                    this.handleSearch()} value=${this.initialQuery}/>
                 <button><i class="ml-auto icon w-5 h-5" @click=${() => {
                     this.querySelector<HTMLInputElement>("#search")!.value = "";
                     this.handleSearch();

@@ -5,10 +5,11 @@ import { closeButton, fixLinksAndVideos, renderError, renderTopbar } from "../ap
 import { i18n } from "../utils/i18n.js";
 import { router } from "../utils/routing.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { minusIcon, pencilIcon, plusIcon, searchIcon, settingsIcon } from "../utils/icons.js";
+import { linkIcon, minusIcon, pencilIcon, plusIcon, searchIcon, settingsIcon } from "../utils/icons.js";
 import { map } from "lit/directives/map.js";
 import { Store, Subreddit } from "../utils/store.js";
 import { state } from "../appstate.js";
+import { HackerNewsSorting } from "../apis/hackernews.js";
 
 @customElement("main-page")
 export class MainPage extends LitElement {
@@ -39,15 +40,27 @@ export class MainPage extends LitElement {
     render() {
         if (this.error) return renderError(this.error);
         const subreddits = Store.getSubreddits()!;
+        const hnTopics: { label: string; value: string }[] = [
+            { label: "Top Stories", value: "/hn/topstories" },
+            { label: "New", value: "/hn/newstories" },
+            { label: "Ask Hackernews", value: "/hn/askstories" },
+            { label: "Show Hackernews", value: "/hn/showstories" },
+            { label: "Jobs", value: "/hn/jobstories" },
+        ];
         return html`<div class="${pageContainerStyle}">
-            <div class="relative flex flex-col gap-4 mt-4">
-                <h2 class="text-center">ledit</h2>
-                <div class="absolute -top-4 right-0 flex items-center">
-                    <theme-toggle class="w-10 h-10"></theme-toggle>
+            <div class="relative flex flex-col md:gap-2 w-full max-w-[480px] mx-auto">
+                <div class="flex items-center">
+                    <div class="self-center text-lg font-semibold px-2 py-1 text-primary text-center flex gap-1 items-center justify-center">
+                        <i class="icon w-6 h-6 fill-primary">${linkIcon}</i><span>ledit</span>
+                    </div>
+                    <div class="ml-auto flex">
+                        <a href="/settings" class="w-10 h-10 flex items-center justify-center"><i class="icon w-4 h-4">${settingsIcon}</i></a>
+                        <theme-toggle class="w-10 h-10"></theme-toggle>
+                    </div>
                 </div>
-                <div class="w-full max-w-[480px] mx-auto flex flex-col">
-                    <div class="flex flex-col pb-4 border-b border-divider">
-                        <h2 class="text-muted-fg flex items-center pl-4">
+                <div class="w-full mx-auto flex flex-col md:gap-4">
+                    <div class="flex flex-col border border-divider md:rounded-md md:fancy-shadow overflow-x-clip">
+                        <h2 class="text-muted-fg flex items-center pl-4 border-b border-divider">
                             <span>Reddit</span>
                             <button class="ml-auto -mr-1 w-10 h-10 flex items-center justify-center" @click=${() => this.search()}>
                                 <i class="icon w-5 h-5 fill-primary">${searchIcon}</i>
@@ -56,33 +69,33 @@ export class MainPage extends LitElement {
                                 <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
                             </button>
                         </h2>
-                        <div class="flex flex-col">
-                            ${map(
-                                subreddits,
-                                (subreddit) => html`
-                                    <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
-                                        <a class="flex-grow truncate" href="/r/${subreddit.subreddits.join("+")}">${subreddit.label}</a>
-                                        <button
-                                            class="ml-auto w-6 h-6 flex items-center justify-center"
-                                            @click=${() => this.editSubreddit(subreddit)}
-                                        >
-                                            <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
-                                        </button>
-                                        <button
-                                            class="ml-auto w-6 h-6 flex items-center justify-center"
-                                            @click=${() => this.deleteSubreddit(subreddit)}
-                                        >
-                                            <i class="icon w-6 h-6 fill-primary">${minusIcon}</i>
-                                        </button>
-                                    </div>
-                                `
-                            )}
-                        </div>
+                        ${map(
+                            subreddits,
+                            (subreddit) => html`
+                                <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
+                                    <a class="flex-grow truncate" href="/r/${subreddit.subreddits.join("+")}">${subreddit.label}</a>
+                                    <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.editSubreddit(subreddit)}>
+                                        <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
+                                    </button>
+                                    <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.deleteSubreddit(subreddit)}>
+                                        <i class="icon w-6 h-6 fill-primary">${minusIcon}</i>
+                                    </button>
+                                </div>
+                            `
+                        )}
                     </div>
-                    <div class="flex flex-col pt-4">
-                        <h2 class="text-muted-fg flex items-center pl-4">
-                            <a href="/hn">Hackernews</a>
+                    <div class="flex flex-col border border-divider md:rounded-md md:fancy-shadow overflow-x-clip">
+                        <h2 class="text-muted-fg h-10 flex items-center pl-4 border-b border-divider">
+                            <span>Hackernews</span>
                         </h2>
+                        ${map(
+                            hnTopics,
+                            (topic) => html`
+                                <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
+                                    <a class="flex-grow truncate" href="${topic.value}">${topic.label}</a>
+                                </div>
+                            `
+                        )}
                     </div>
                 </div>
             </div>

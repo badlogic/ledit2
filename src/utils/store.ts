@@ -15,6 +15,7 @@ export type Settings = {
     devPrefs: DevPreferences;
     subreddits: Subreddit[];
     seen: string[];
+    collapseSeen: boolean;
 };
 
 export type StoreKey = "user" | "settings";
@@ -40,6 +41,7 @@ export class Store {
         ];
 
         settings.seen = settings.seen ?? [];
+        settings.collapseSeen = settings.collapseSeen ?? false;
 
         Store.set<Settings>("settings", settings);
     }
@@ -105,6 +107,14 @@ export class Store {
     static setSeen(seenSet: Set<string>) {
         this.seenSet = seenSet;
         Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, seen: Array.from(seenSet) });
+    }
+
+    static getCollapseSeen(): boolean {
+        return Store.get<Settings>("settings")?.collapseSeen ?? false;
+    }
+
+    static setCollapseSeen(collapseSeen: boolean) {
+        Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, collapseSeen });
     }
 }
 

@@ -704,6 +704,11 @@ export function fixLinksAndVideos(container: HTMLElement) {
     }
 }
 
+function resetZoom() {
+    let viewport = document.querySelector("meta[name=viewport]");
+    (viewport as any).content = "width=device-width, initial-scale=1.0";
+}
+
 @customElement("image-gallery")
 export class ImageGallery extends LitElement {
     @property()
@@ -727,8 +732,7 @@ export class ImageGallery extends LitElement {
     disconnectedCallback(): void {
         super.disconnectedCallback();
         document.body.classList.remove("overflow-hidden");
-        const viewportmeta = document.querySelector("meta[name=viewport]")!;
-        viewportmeta.setAttribute("content", "width=device-width, initial-scale=1");
+        resetZoom();
     }
 
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
