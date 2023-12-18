@@ -65,13 +65,15 @@ export function intersectsViewport(element: Element | null) {
     return verticalVisible && horizontalVisible;
 }
 
+const listenersToRemoveOnPageClose: { event: string; listener: () => void }[] = [];
 export function enableYoutubePause(videoElement: HTMLIFrameElement) {
-    // FIXME this leaks!
-    document.addEventListener("scroll", () => {
+    const youtubePause = () => {
         if (videoElement && !intersectsViewport(videoElement)) {
             videoElement.contentWindow?.postMessage('{"event":"command","func":"' + "pauseVideo" + '","args":""}', "*");
         }
-    });
+    };
+    listenersToRemoveOnPageClose.push({ event: "scroll", listener: youtubePause });
+    document.addEventListener("scroll", youtubePause);
 }
 
 @customElement("video-player")
@@ -441,6 +443,9 @@ export class RedditPage extends LitElement {
             }
         }
         postDomCache.clear();
+        for (const listener of listenersToRemoveOnPageClose) {
+            document.removeEventListener(listener.event, listener.listener);
+        }
     }
 
     render() {
@@ -565,7 +570,7 @@ export class RedditCommentsPage extends LitElement {
         if (player) {
             player.disableAutoPause = true;
         }
-        return html`<div class="${pageContainerStyle} overflow-auto -mt-4">
+        return html`<div class="${pageContainerStyle} overflow-auto -mt-4 mb-4">
             ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
             ${this.postDom ? this.postDom.postDom : nothing}
             ${!this.postDom && this.post
