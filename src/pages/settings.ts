@@ -13,11 +13,16 @@ export class SettingsPage extends LitElement {
     render() {
         return html`<div class="${pageContainerStyle}">
             ${renderTopbar("Settings", closeButton())}
-            <div class="flex gap-2 px-4">
+            <div class="flex flex-col gap-2 px-4 mt-4">
                 <slide-button
                     .checked=${Store.getCollapseSeen()}
                     .text=${"Collapse seen posts"}
                     @changed=${(ev: CustomEvent) => Store.setCollapseSeen(ev.detail.value)}
+                ></slide-button>
+                <slide-button
+                    .checked=${Store.getUsersClickable()}
+                    .text=${"Users clickable"}
+                    @changed=${(ev: CustomEvent) => Store.setUsersClickable(ev.detail.value)}
                 ></slide-button>
             </div>
         </div>`;

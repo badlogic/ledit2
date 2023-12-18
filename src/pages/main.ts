@@ -54,7 +54,7 @@ export class MainPage extends LitElement {
                         <i class="icon w-6 h-6 fill-primary">${linkIcon}</i><span>ledit</span>
                     </div>
                     <div class="ml-auto flex">
-                        <a href="/settings" class="w-10 h-10 flex items-center justify-center"><i class="icon w-4 h-4">${settingsIcon}</i></a>
+                        <a href="/settings" class="w-10 h-10 flex items-center justify-center"><i class="icon w-5 h-5">${settingsIcon}</i></a>
                         <theme-toggle class="w-10 h-10"></theme-toggle>
                     </div>
                 </div>

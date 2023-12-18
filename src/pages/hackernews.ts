@@ -54,7 +54,11 @@ export class HackerNewsPostView extends LitElement {
                 <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                     <span>${formatNumber(post.points)} pts</span>
                     <span>•</span>
-                    <a class="text-muted-fg" href="https://news.ycombinator.com/user?id=${post.author}">${post.author}</a>
+                    <a class="text-muted-fg" href="https://news.ycombinator.com/user?id=${post.author}" @click=${(ev: Event) => {
+            if (!Store.getUsersClickable()) {
+                ev.preventDefault();
+            }
+        }}>${post.author}</a>
                     <span>•</span>
                     <span>${getTimeDifference(post.createdAt * 1000)}
                 </div>
@@ -237,6 +241,11 @@ export class HackerNewsCommentView extends LitElement {
                 <a
                     class="font-semibold whitespace-nowrap ${this.opAuthor == comment.author ? "text-primary" : "text-blue-400"}"
                     href="https://news.ycombinator.com/user?id=${comment.author}"
+                    @click=${(ev: Event) => {
+                        if (!Store.getUsersClickable()) {
+                            ev.preventDefault();
+                        }
+                    }}
                     >${comment.author}</a
                 >
                 <span class="text-muted-fg whitespace-nowrap">•</span>

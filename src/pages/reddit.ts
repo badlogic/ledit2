@@ -404,7 +404,11 @@ export class RedditPostView extends LitElement {
                             ? html`<a href="/r/${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
                             : nothing
                     }
-                    <a class="text-muted-fg" href="https://old.reddit.com/u/${post.author}">${post.author}</a>
+                    <a class="text-muted-fg" href="https://old.reddit.com/u/${post.author}" @click=${(ev: Event) => {
+            if (!Store.getUsersClickable()) {
+                ev.preventDefault();
+            }
+        }}>${post.author}</a>
                     <span>•</span>
                     <span>${getTimeDifference(post.created_utc * 1000)}
                 </div>
@@ -671,6 +675,11 @@ export class RedditCommentView extends LitElement {
                 <a
                     href="https://old.reddit.com/u/${comment.author}"
                     class="font-semibold whitespace-nowrap ${this.opAuthor == comment.author ? "text-primary" : ""}"
+                    @click=${(ev: Event) => {
+                        if (!Store.getUsersClickable()) {
+                            ev.preventDefault();
+                        }
+                    }}
                     >${comment.author}</a
                 >
                 <span class="text-muted-fg whitespace-nowrap">•</span>
