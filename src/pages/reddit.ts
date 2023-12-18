@@ -292,6 +292,7 @@ export class RedditPostView extends LitElement {
 
         // Self post, show text, dim it, cap vertical size, and make it expand on click.
         if (post.is_self) {
+            if (post.selftext_html.trim().length == 0) return html`${nothing}`;
             const selfContent = dom(html`<div class="px-4 flex flex-col">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
             onVisibleOnce(selfContent, () => {
                 const maxHeight = 150;
