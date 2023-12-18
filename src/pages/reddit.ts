@@ -643,7 +643,11 @@ export class RedditCommentView extends LitElement {
             class="min-w-[300px] flex flex-col cursor-pointer ${this.isRoot ? "mt-4" : "mt-4 ml-2 pl-2 border-l border-divider"}"
         >
             <div class="text-xs flex items-center gap-1">
-                <span class="font-semibold whitespace-nowrap ${this.opAuthor == comment.author ? "text-primary" : ""}">${comment.author}</span>
+                <a
+                    href="https://old.reddit.com/u/${comment.author}"
+                    class="font-semibold whitespace-nowrap ${this.opAuthor == comment.author ? "text-primary" : ""}"
+                    >${comment.author}</a
+                >
                 <span class="text-muted-fg whitespace-nowrap">•</span>
                 <span class="text-muted-fg whitespace-nowrap">${getTimeDifference(comment.created_utc * 1000)}</span>
                 <span class="text-muted-fg whitespace-nowrap">•</span>

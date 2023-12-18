@@ -234,10 +234,10 @@ export class HackerNewsCommentView extends LitElement {
             class="min-w-[300px] flex flex-col cursor-pointer ${this.isRoot ? "mt-4" : "mt-4 ml-2 pl-2 border-l border-divider"}"
         >
             <div class="text-xs flex items-center gap-1">
-                <a class="font-semibold whitespace-nowrap ${
-                    this.opAuthor == comment.author ? "text-primary" : "text-blue-400"
-                }" href="https://news.ycombinator.com/user?id=${comment.author}"
-                    >${comment.author}</span
+                <a
+                    class="font-semibold whitespace-nowrap ${this.opAuthor == comment.author ? "text-primary" : "text-blue-400"}"
+                    href="https://news.ycombinator.com/user?id=${comment.author}"
+                    >${comment.author}</a
                 >
                 <span class="text-muted-fg whitespace-nowrap">•</span>
                 <span class="text-muted-fg whitespace-nowrap">${getTimeDifference(comment.createdAt * 1000)}</span>
@@ -252,11 +252,9 @@ export class HackerNewsCommentView extends LitElement {
             </div>
             <div class="">${unsafeHTML(comment.content)}</div>
             <div id="replies">
-                ${
-                    replies
-                        ? map(replies, (reply) => html`<hackernews-comment .comment=${reply} .opAuthor=${this.opAuthor}></hackernews-comment>`)
-                        : nothing
-                }
+                ${replies
+                    ? map(replies, (reply) => html`<hackernews-comment .comment=${reply} .opAuthor=${this.opAuthor}></hackernews-comment>`)
+                    : nothing}
             </div>
         </div>`)[0];
         const repliesDom = commentDom.querySelector("#replies");
