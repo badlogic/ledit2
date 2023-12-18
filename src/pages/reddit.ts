@@ -390,10 +390,10 @@ export class RedditPostView extends LitElement {
                     <span>•</span>
                     ${
                         post.subreddit != params?.get("subreddit")
-                            ? html`<a href="${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
+                            ? html`<a href="/r/${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
                             : nothing
                     }
-                    <span>${post.author}</span>
+                    <a class="text-muted-fg" href="https://old.reddit.com/u/${post.author}">${post.author}</a>
                     <span>•</span>
                     <span>${getTimeDifference(post.created_utc * 1000)}
                 </div>
