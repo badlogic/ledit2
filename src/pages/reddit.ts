@@ -203,12 +203,16 @@ export class RedditPostView extends LitElement {
     @property()
     post?: RedditPost;
 
+    @property()
+    expanded = false;
+
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
     }
 
     updated() {
-        fixLinksAndVideos(this);
+        const collapse = Store.getCollapseSeen() && Store.getSeen().has(this.post?.data.id ?? "") && !this.expanded;
+        fixLinksAndVideos(this, collapse);
     }
 
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
@@ -223,6 +227,64 @@ export class RedditPostView extends LitElement {
             "0px",
             0
         );
+    }
+
+    render() {
+        if (!this.post) return html`<div class="mt-12"><loading-spinner></loading-spinner></div>`;
+        const params = router.getCurrentParams();
+        const post = this.post.data;
+        const collapse = Store.getCollapseSeen() && Store.getSeen().has(post.id) && !this.expanded;
+        const content = collapse ? undefined : this.renderContent(this.post);
+
+        return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${(ev: Event) => {
+            if (collapse) {
+                this.expanded = true;
+            } else {
+                this.showComments(ev, true);
+            }
+        }}>
+            <div class="flex flex-col ${content ? "mb-2" : ""}">
+                <a href="${post.url}" class="px-4 ${collapse ? "text-muted-fg" : "text-black dark:text-white"} font-semibold">${unescapeHtml(
+            post.title
+        )}</a>
+                <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
+                    <span>${formatNumber(post.score)} pts</span>
+                    <span>•</span>
+                    ${
+                        post.subreddit != params?.get("subreddit")
+                            ? html`<a href="/r/${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
+                            : nothing
+                    }
+                    <a class="text-muted-fg" href="https://old.reddit.com/u/${post.author}" @click=${(ev: Event) => {
+            if (!Store.getUsersClickable()) {
+                ev.preventDefault();
+            }
+        }}>${post.author}</a>
+                    <span>•</span>
+                    <span>${getTimeDifference(post.created_utc * 1000)}
+                </div>
+            </div>
+            ${content && !collapse ? html`<div class="flex items-center justify-center w-full">${content}</div>` : nothing}
+            <div class="px-4 flex gap-4 items-center -mb-2 text-sm">
+                <a href="/r/comments${post.permalink}" @click=${(ev: Event) =>
+            this.showComments(ev)} class="text-primary h-8 flex items-center gap-1">
+                    <i class="icon w-4 h-4 fill-primary">${speechBubbleIcon}</i>${post.num_comments}
+                </a>
+                <a href="https://old.reddit.com/r/${post.subreddit + "/comments/" + post.id}" class="text-primary h-8 flex items-center gap-1">
+                    <i class="icon w-4 h-4 fill-primary">${replyIcon}</i><span>Reply</span>
+                </a>
+            </div>
+        </div>`;
+    }
+
+    showComments(ev: Event, push = false) {
+        console.log(this.getBoundingClientRect());
+        lastPostBoundingRect = this.getBoundingClientRect();
+
+        if (push && !this.querySelector("video-js")) {
+            router.push("/r/comments" + this.post?.data.permalink);
+            return;
+        }
     }
 
     renderContent(redditPost: RedditPost): TemplateResult | HTMLElement | undefined {
@@ -380,60 +442,6 @@ export class RedditPostView extends LitElement {
             `;
         }
         return undefined;
-    }
-
-    render() {
-        if (!this.post) return html`<div class="mt-12"><loading-spinner></loading-spinner></div>`;
-        const params = router.getCurrentParams();
-        const post = this.post.data;
-        const collapse = Store.getCollapseSeen() && Store.getSeen().has(post.id);
-        const content = collapse ? undefined : this.renderContent(this.post);
-
-        return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${(ev: Event) => {
-            this.showComments(ev, true);
-        }}>
-            <div class="flex flex-col ${content ? "mb-2" : ""}">
-                <a href="${post.url}" class="px-4 ${collapse ? "text-muted-fg" : "text-black dark:text-white"} font-semibold">${unescapeHtml(
-            post.title
-        )}</a>
-                <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
-                    <span>${formatNumber(post.score)} pts</span>
-                    <span>•</span>
-                    ${
-                        post.subreddit != params?.get("subreddit")
-                            ? html`<a href="/r/${post.subreddit}" class="text-muted-fg">r/${post.subreddit}</a><span>•</span>`
-                            : nothing
-                    }
-                    <a class="text-muted-fg" href="https://old.reddit.com/u/${post.author}" @click=${(ev: Event) => {
-            if (!Store.getUsersClickable()) {
-                ev.preventDefault();
-            }
-        }}>${post.author}</a>
-                    <span>•</span>
-                    <span>${getTimeDifference(post.created_utc * 1000)}
-                </div>
-            </div>
-            ${content && !collapse ? html`<div class="flex items-center justify-center w-full">${content}</div>` : nothing}
-            <div class="px-4 flex gap-4 items-center -mb-2 text-sm">
-                <a href="/r/comments${post.permalink}" @click=${(ev: Event) =>
-            this.showComments(ev)} class="text-primary h-8 flex items-center gap-1">
-                    <i class="icon w-4 h-4 fill-primary">${speechBubbleIcon}</i>${post.num_comments}
-                </a>
-                <a href="https://old.reddit.com/r/${post.subreddit + "/comments/" + post.id}" class="text-primary h-8 flex items-center gap-1">
-                    <i class="icon w-4 h-4 fill-primary">${replyIcon}</i><span>Reply</span>
-                </a>
-            </div>
-        </div>`;
-    }
-
-    showComments(ev: Event, push = false) {
-        console.log(this.getBoundingClientRect());
-        lastPostBoundingRect = this.getBoundingClientRect();
-
-        if (push && !this.querySelector("video-js")) {
-            router.push("/r/comments" + this.post?.data.permalink);
-            return;
-        }
     }
 }
 

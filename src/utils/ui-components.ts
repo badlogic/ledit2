@@ -672,10 +672,15 @@ export function renderPageShell(title: string, content: TemplateResult | HTMLEle
     </div> `;
 }
 
-export function fixLinksAndVideos(container: HTMLElement) {
+export function fixLinksAndVideos(container: HTMLElement, collapsed = false) {
     const links = container.querySelectorAll("a");
     if (links) {
         links.forEach((link) => {
+            if (collapsed) {
+                link.addEventListener("click", (ev) => ev.preventDefault());
+                return;
+            }
+
             if (link.host != location.host) {
                 link.setAttribute("target", "_blank");
                 link.setAttribute("rel", "noopener noreferrer");
