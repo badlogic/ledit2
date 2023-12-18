@@ -67,10 +67,12 @@ export class HackerNewsPostView extends LitElement {
                 ev.stopPropagation();
                 ev.stopImmediatePropagation();
             }
-        }} class="text-primary h-8 flex items-center gap-1"><i class="icon w-5 h-5 fill-primary">${speechBubbleIcon}</i>${post.numComments}</a>
+        }} class="text-primary h-8 flex items-center gap-1 text-sm"><i class="icon w-4 h-4 fill-primary">${speechBubbleIcon}</i>${
+            post.numComments
+        }</a>
                 <a href="https://news.ycombinator.com/item?id=${
                     post.id
-                }" class="text-primary h-8 flex items-center gap-1"><i class="icon w-5 h-5 fill-primary">${replyIcon}</i><span>Reply</span></a>
+                }" class="text-primary h-8 flex items-center gap-1"><i class="icon w-4 h-4 fill-primary">${replyIcon}</i><span>Reply</span></a>
             </div>
         </div>`;
     }

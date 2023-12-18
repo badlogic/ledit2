@@ -215,7 +215,7 @@ export class RedditPostView extends LitElement {
         );
     }
 
-    renderContent(redditPost: RedditPost): TemplateResult | HTMLElement {
+    renderContent(redditPost: RedditPost): TemplateResult | HTMLElement | undefined {
         const post = redditPost.data;
 
         // Self post, show text, dim it, cap vertical size, and make it expand on click.
@@ -361,20 +361,21 @@ export class RedditPostView extends LitElement {
                 />
             `;
         }
-        return html`${nothing}`;
+        return undefined;
     }
 
     render() {
         if (!this.post) return html`<div class="mt-12"><loading-spinner></loading-spinner></div>`;
         const params = router.getCurrentParams();
         const post = this.post.data;
+        const content = this.renderContent(this.post);
 
-        return html`<div class="flex flex-col gap-1 cursor-pointer" @click=${() => {
+        return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${() => {
             if (!this.querySelector("video-js")) {
                 router.push("/r/comments" + post.permalink);
             }
         }}>
-            <div class="flex flex-col mb-2">
+            <div class="flex flex-col ${content ? "mb-2" : ""}">
                 <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
                 <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                     <span>${formatNumber(post.score)} pts</span>
@@ -389,18 +390,18 @@ export class RedditPostView extends LitElement {
                     <span>${getTimeDifference(post.created_utc * 1000)}
                 </div>
             </div>
-            <div class="flex items-center justify-center w-full">${this.renderContent(this.post)}</div>
-            <div class="px-4 flex gap-4 items-center -mb-2">
+            ${content ? html`<div class="flex items-center justify-center w-full">${content}</div>` : nothing}
+            <div class="px-4 flex gap-4 items-center -mb-2 text-sm">
                 <a href="/r/comments${post.permalink}" @click=${(ev: Event) => {
             if (this.noDrillDown) {
                 ev.preventDefault();
                 ev.stopPropagation();
                 ev.stopImmediatePropagation();
             }
-        }} class="text-primary h-8 flex items-center gap-1"><i class="icon w-5 h-5 fill-primary">${speechBubbleIcon}</i>${post.num_comments}</a>
+        }} class="text-primary h-8 flex items-center gap-1"><i class="icon w-4 h-4 fill-primary">${speechBubbleIcon}</i>${post.num_comments}</a>
                 <a href="https://old.reddit.com/r/${
                     post.subreddit + "/comments/" + post.id
-                }" class="text-primary h-8 flex items-center gap-1"><i class="icon w-5 h-5 fill-primary">${replyIcon}</i><span>Reply</span></a>
+                }" class="text-primary h-8 flex items-center gap-1"><i class="icon w-4 h-4 fill-primary">${replyIcon}</i><span>Reply</span></a>
             </div>
         </div>`;
     }
