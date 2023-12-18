@@ -5,7 +5,7 @@ import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit
 import { router } from "../utils/routing.js";
 import { formatDate, formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { closeButton, dom, fixLinksAndVideos, getScrollParent, onVisibleOnce, renderError, renderTopbar } from "../app.js";
+import { closeButton, dom, fixLinksAndVideos, getScrollParent, onVisibilityChange, onVisibleOnce, renderError, renderTopbar } from "../app.js";
 import { closeIcon, eyeClosedIcon, eyeOpenIcon, infoIcon, plusIcon, replyIcon, searchIcon, speechBubbleIcon } from "../utils/icons.js";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
@@ -66,99 +66,14 @@ export function intersectsViewport(element: Element | null) {
 }
 
 export function enableYoutubePause(videoElement: HTMLIFrameElement) {
-    // Pause when out of view
+    // FIXME this leaks!
     document.addEventListener("scroll", () => {
         if (videoElement && !intersectsViewport(videoElement)) {
             videoElement.contentWindow?.postMessage('{"event":"command","func":"' + "pauseVideo" + '","args":""}', "*");
         }
     });
-    window.addEventListener("overlay-opened", () => {
-        if (videoElement) {
-            videoElement.contentWindow?.postMessage('{"event":"command","func":"' + "pauseVideo" + '","args":""}', "*");
-        }
-    });
 }
 
-export function renderVideo(videoDesc: { width: number; height: number; urls: string[] }, loop: boolean): HTMLElement {
-    let videoDom = dom(html` <div
-        class="flex justify-center w-full cursor-pointer"
-        @click=${(ev: Event) => {
-            ev.stopPropagation();
-            ev.stopImmediatePropagation();
-        }}
-    >
-        <video-js controls class="video-js" width=${videoDesc.width} ${loop ? "loop" : ""} data-setup="{}">
-            ${map(videoDesc.urls, (url) => html`<source src="${unescapeHtml(url)}" />`)}
-        </video-js>
-    </div>`)[0];
-    onAddedToDom(videoDom, () => {
-        const videoDiv = videoDom.querySelector("video-js")! as HTMLElement;
-        let width = videoDesc.width;
-        let height = videoDesc.height;
-        let maxHeight = window.innerHeight * 0.7;
-        const computed = getComputedStyle(videoDom.parentElement!);
-        const containerWidth = Number.parseInt(computed.width) - Number.parseFloat(computed.paddingLeft) - Number.parseFloat(computed.paddingRight);
-        if (width > containerWidth || width < containerWidth) {
-            let aspect = height / width;
-            width = containerWidth;
-            height = aspect * width;
-        }
-        if (height > maxHeight) {
-            let scale = maxHeight / height;
-            height = maxHeight;
-            width = width * scale;
-        }
-        videoDiv.style.width = width + "px";
-        videoDiv.style.height = height + "px";
-
-        const video = videojs(videoDiv);
-        var videoElement = video.el().querySelector("video")!;
-        (videoDiv as any).player = video;
-
-        // Reset video element width/height so fullscreen works
-        videoElement.style.width = "";
-        videoElement.style.height = "";
-
-        // Toggle pause/play on click
-        const togglePlay = function (ev: Event) {
-            ev.stopPropagation();
-            ev.stopImmediatePropagation();
-            if (video.paused()) {
-                video.play();
-            } else {
-                video.pause();
-            }
-        };
-        videoElement.addEventListener("clicked", togglePlay);
-        onTapped(videoElement, togglePlay);
-
-        // Pause when out of view
-        document.addEventListener("scroll", () => {
-            if (videoElement && videoElement === document.pictureInPictureElement) {
-                return;
-            }
-            if (!video.paused() && !intersectsViewport(videoElement)) {
-                /*if (videoDom.parentElement != document.body) {
-                document.body.append(videoDom);
-                videoDom.style.position = "absolute";
-                videoDom.style.top = "0";
-             }*/
-                video.pause();
-            }
-        });
-
-        // Pause when overlay is opened
-        window.addEventListener("overlay-opened", () => {
-            if (videoElement && videoElement === document.pictureInPictureElement) {
-                return;
-            }
-            if (!video.paused()) {
-                video.pause();
-            }
-        });
-    });
-    return videoDom;
-}
 @customElement("video-player")
 export class VideoPlayer extends LitElement {
     @property()
@@ -167,43 +82,61 @@ export class VideoPlayer extends LitElement {
     @property()
     loop = false;
 
+    observer?: IntersectionObserver;
+
+    disableAutoPause = false;
+
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
     }
 
-    firstUpdated() {
+    updated() {
         const videoDiv = this.querySelector("video-js")! as HTMLElement;
-        const video = videojs(videoDiv);
-        var videoElement = video.el().querySelector("video")!;
-        (videoDiv as any).player = video;
+        if ((videoDiv as any).player) {
+            (videoDiv as any).player.dispose()(videoDiv as any).player = null;
+        }
+        this.setupVideoPlayer();
+    }
+
+    setupVideoPlayer() {
+        const videoDiv = this.querySelector("video-js")! as HTMLElement;
+        if (!videoDiv) return;
+        if ((videoDiv as any).player) return;
+        const player = videojs(videoDiv, {});
+        (videoDiv as any).player = player;
 
         // Toggle pause/play on click
         const togglePlay = function (ev: Event) {
+            if ((ev.target as HTMLElement).tagName != "VIDEO") return;
             ev.preventDefault();
             ev.stopPropagation();
             ev.stopImmediatePropagation();
-            if (video.paused()) {
-                video.play();
+            if (player.paused()) {
+                player.play();
             } else {
-                video.pause();
+                player.pause();
             }
         };
-        videoElement.addEventListener("click", togglePlay);
-        onTapped(videoElement, togglePlay);
+        onTapped(this, togglePlay);
+        this.observer = onVisibilityChange(
+            this,
+            () => {},
+            () => {
+                if (this.disableAutoPause) return;
+                if (!player.paused()) {
+                    player.pause();
+                }
+            }
+        );
+    }
 
-        document.addEventListener("scroll", () => {
-            if (videoElement && videoElement === document.pictureInPictureElement) {
-                return;
-            }
-            if (!video.paused() && !intersectsViewport(videoElement) && !location.pathname.includes("/r/comments")) {
-                video.pause();
-            }
-        });
+    connectedCallback(): void {
+        super.connectedCallback();
     }
 
     render() {
         if (!this.videoDesc) return html`${nothing}`;
-        return html`
+        return dom(html`
             <div class="flex justify-center w-full cursor-pointer" style="position: relative; display: block;">
                 <video-js
                     controls
@@ -215,7 +148,12 @@ export class VideoPlayer extends LitElement {
                     ${this.videoDesc.urls.map((url) => html`<source src="${unescapeHtml(url)}" />`)}
                 </video-js>
             </div>
-        `;
+        `)[0];
+    }
+
+    dispose() {
+        this.observer?.unobserve(this);
+        (this.querySelector("video-js") as any)?.player.dispose();
     }
 }
 
@@ -397,7 +335,7 @@ export class RedditPostView extends LitElement {
             if (!image) return document.createElement("div");
             if (!post.preview.reddit_video_preview?.fallback_url)
                 return html`<img
-                    class="max-h-[30vh]"
+                    class="max-h-[50vh]"
                     src="${unescapeHtml(image.url)}"
                     @click=${(ev: Event) => showGallery(ev, [unescapeHtml(image!.url)])}
                 />`;
@@ -415,7 +353,7 @@ export class RedditPostView extends LitElement {
         if (post.thumbnail && !missingThumbnailTags.has(post.thumbnail)) {
             return html`
                 <img
-                    class="max-h-[30vh]"
+                    class="max-h-[50vh]"
                     src="${unescapeHtml(thumbnailUrl)}"
                     @click=${(ev: Event) => showGallery(ev, [unescapeHtml(thumbnailUrl)])}
                 />
@@ -430,7 +368,9 @@ export class RedditPostView extends LitElement {
         const post = this.post.data;
 
         return html`<div class="flex flex-col gap-1 cursor-pointer" @click=${() => {
-            router.push("/r/comments" + post.permalink);
+            if (!this.querySelector("video-js")) {
+                router.push("/r/comments" + post.permalink);
+            }
         }}>
             <div class="flex flex-col mb-2">
                 <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
@@ -488,6 +428,19 @@ export class RedditPage extends LitElement {
 
     updated() {
         fixLinksAndVideos(this);
+    }
+
+    disconnectedCallback(): void {
+        super.disconnectedCallback();
+        const streamView = this.querySelector("reddit-stream-view") as RedditStreamView;
+        for (const page of streamView.renderedPages) {
+            for (const player of Array.from(page.container.querySelectorAll("video-js"))) {
+                if ((player as any).player) {
+                    (player as any).player.dispose();
+                }
+            }
+        }
+        postDomCache.clear();
     }
 
     render() {
@@ -563,6 +516,10 @@ export class RedditCommentsPage extends LitElement {
     disconnectedCallback(): void {
         if (this.postDom) {
             this.postDom.originalParent.append(this.postDom.postDom);
+            setTimeout(() => {
+                const player = this.postDom?.postDom.querySelector<VideoPlayer>("video-player");
+                if (player) player.disableAutoPause = false;
+            }, 1000);
         }
     }
 
@@ -604,6 +561,10 @@ export class RedditCommentsPage extends LitElement {
     }
 
     render() {
+        const player = this.postDom?.postDom.querySelector<VideoPlayer>("video-player");
+        if (player) {
+            player.disableAutoPause = true;
+        }
         return html`<div class="${pageContainerStyle} overflow-auto -mt-4">
             ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
             ${this.postDom ? this.postDom.postDom : nothing}

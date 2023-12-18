@@ -39,7 +39,7 @@ export function onVisibleOnce(target: Element, callback: () => void, rootMargin 
     observer.observe(target);
 }
 
-export function onVisibilityChange(target: Element, onVisible: () => void, onInvisible: () => void): void {
+export function onVisibilityChange(target: Element, onVisible: () => void, onInvisible: () => void) {
     const observer = new IntersectionObserver(
         (entries) => {
             entries.forEach((entry) => {
@@ -57,6 +57,7 @@ export function onVisibilityChange(target: Element, onVisible: () => void, onInv
         }
     );
     observer.observe(target);
+    return observer;
 }
 
 export function hasLinkOrButtonParent(el: Element | HTMLElement | null) {
