@@ -123,6 +123,10 @@
         @apply border-l-2 border-primary pl-2;
     }
 
+    .md a {
+        @apply break-any;
+    }
+
     reddit-post .md pre {
         overflow: auto;
         white-space: pre-wrap;
@@ -182,16 +186,5 @@
     .fancy-shadow {
         box-shadow: rgb(0 0 0 / 8%) 0px 1px 2px, rgb(0 0 0 / 5%) 0px 4px 12px;
         @apply dark:shadow-white/10 dark:shadow;
-    }
-
-    /* For Webkit-based browsers (Chrome, Safari and Opera) */
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
-
-    /* For IE, Edge and Firefox */
-    .scrollbar-hide {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
     }
 }

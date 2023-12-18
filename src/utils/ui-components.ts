@@ -682,6 +682,8 @@ export function fixLinksAndVideos(container: HTMLElement) {
             } else {
                 link.addEventListener("click", (ev) => {
                     ev.preventDefault();
+                    ev.stopPropagation();
+                    ev.stopImmediatePropagation();
                     router.push(link.pathname);
                 });
             }
@@ -702,21 +704,6 @@ export function fixLinksAndVideos(container: HTMLElement) {
     }
 }
 
-function preventPinchZoom(event: TouchEvent): void {
-    if (event.touches.length > 1) {
-        event.preventDefault();
-    }
-}
-document.addEventListener("touchstart", preventPinchZoom, { passive: false });
-
-export function togglePinchZoom(enable: boolean): void {
-    if (enable) {
-        document.removeEventListener("touchstart", preventPinchZoom);
-    } else {
-        document.addEventListener("touchstart", preventPinchZoom, { passive: false });
-    }
-}
-
 @customElement("image-gallery")
 export class ImageGallery extends LitElement {
     @property()
@@ -734,14 +721,14 @@ export class ImageGallery extends LitElement {
 
     connectedCallback(): void {
         super.connectedCallback();
-        togglePinchZoom(true);
         document.body.classList.add("overflow-hidden");
     }
 
     disconnectedCallback(): void {
         super.disconnectedCallback();
-        togglePinchZoom(false);
         document.body.classList.remove("overflow-hidden");
+        const viewportmeta = document.querySelector("meta[name=viewport]")!;
+        viewportmeta.setAttribute("content", "width=device-width, initial-scale=1");
     }
 
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {

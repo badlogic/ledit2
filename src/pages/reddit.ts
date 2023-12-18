@@ -5,7 +5,18 @@ import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit
 import { router } from "../utils/routing.js";
 import { formatDate, formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { closeButton, dom, fixLinksAndVideos, getScrollParent, onVisibilityChange, onVisibleOnce, renderError, renderTopbar } from "../app.js";
+import {
+    closeButton,
+    dom,
+    fixLinksAndVideos,
+    getScrollParent,
+    isMobileBrowser,
+    isSafariBrowser,
+    onVisibilityChange,
+    onVisibleOnce,
+    renderError,
+    renderTopbar,
+} from "../app.js";
 import { closeIcon, eyeClosedIcon, eyeOpenIcon, infoIcon, plusIcon, replyIcon, searchIcon, speechBubbleIcon } from "../utils/icons.js";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
@@ -14,6 +25,7 @@ import videojs from "video.js";
 import { Store } from "../utils/store.js";
 
 const postDomCache = new Map<string, HTMLElement>();
+let lastPostBoundingRect: DOMRect | undefined;
 
 function renderRedditTextContent(content?: string) {
     if (!content) return html`${nothing}`;
@@ -146,6 +158,7 @@ export class VideoPlayer extends LitElement {
                     style="aspect-ratio: ${this.videoDesc.width / this.videoDesc.height};"
                     ?loop=${this.loop}
                     data-setup="{}"
+                    playsinline
                 >
                     ${this.videoDesc.urls.map((url) => html`<source src="${unescapeHtml(url)}" />`)}
                 </video-js>
@@ -189,9 +202,6 @@ export class RedditStreamView extends StreamView<RedditPost> {
 export class RedditPostView extends LitElement {
     @property()
     post?: RedditPost;
-
-    @property()
-    noDrillDown = false;
 
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
@@ -378,10 +388,8 @@ export class RedditPostView extends LitElement {
         const post = this.post.data;
         const content = this.renderContent(this.post);
 
-        return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${() => {
-            if (!this.querySelector("video-js")) {
-                router.push("/r/comments" + post.permalink);
-            }
+        return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${(ev: Event) => {
+            this.showComments(ev, true);
         }}>
             <div class="flex flex-col ${content ? "mb-2" : ""}">
                 <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${unescapeHtml(post.title)}</a>
@@ -400,18 +408,25 @@ export class RedditPostView extends LitElement {
             </div>
             ${content ? html`<div class="flex items-center justify-center w-full">${content}</div>` : nothing}
             <div class="px-4 flex gap-4 items-center -mb-2 text-sm">
-                <a href="/r/comments${post.permalink}" @click=${(ev: Event) => {
-            if (this.noDrillDown) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                ev.stopImmediatePropagation();
-            }
-        }} class="text-primary h-8 flex items-center gap-1"><i class="icon w-4 h-4 fill-primary">${speechBubbleIcon}</i>${post.num_comments}</a>
-                <a href="https://old.reddit.com/r/${
-                    post.subreddit + "/comments/" + post.id
-                }" class="text-primary h-8 flex items-center gap-1"><i class="icon w-4 h-4 fill-primary">${replyIcon}</i><span>Reply</span></a>
+                <a href="/r/comments${post.permalink}" @click=${(ev: Event) =>
+            this.showComments(ev)} class="text-primary h-8 flex items-center gap-1">
+                    <i class="icon w-4 h-4 fill-primary">${speechBubbleIcon}</i>${post.num_comments}
+                </a>
+                <a href="https://old.reddit.com/r/${post.subreddit + "/comments/" + post.id}" class="text-primary h-8 flex items-center gap-1">
+                    <i class="icon w-4 h-4 fill-primary">${replyIcon}</i><span>Reply</span>
+                </a>
             </div>
         </div>`;
+    }
+
+    showComments(ev: Event, push = false) {
+        console.log(this.getBoundingClientRect());
+        lastPostBoundingRect = this.getBoundingClientRect();
+
+        if (push && !this.querySelector("video-js")) {
+            router.push("/r/comments" + this.post?.data.permalink);
+            return;
+        }
     }
 }
 
@@ -511,6 +526,11 @@ export class RedditCommentsPage extends LitElement {
         super();
         this.permalink = RedditCommentsPage.getPermalinkFromHref();
         document.title = "ledit - comments";
+        const postId = this.permalink.split("/")[3];
+        const postDom = postDomCache.get(postId);
+        if (postDom) {
+            this.postDom = { originalParent: postDom.parentElement as HTMLElement, postDom: postDom };
+        }
     }
 
     protected createRenderRoot(): Element | ShadowRoot {
@@ -520,7 +540,12 @@ export class RedditCommentsPage extends LitElement {
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
         super.firstUpdated(_changedProperties);
         this.load();
-        getScrollParent(this)!.scrollTop = 0;
+        if (this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0) {
+            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? -40 : 0);
+        } else {
+            getScrollParent(this)!.scrollTop = 0;
+        }
+        lastPostBoundingRect = undefined;
     }
 
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
@@ -538,12 +563,6 @@ export class RedditCommentsPage extends LitElement {
     }
 
     async load() {
-        const postId = this.permalink.split("/")[3];
-        const postDom = postDomCache.get(postId);
-        if (postDom) {
-            this.postDom = { originalParent: postDom.parentElement as HTMLElement, postDom: postDom };
-            this.requestUpdate();
-        }
         const commentsUrl = "https://www.reddit.com/" + this.permalink + ".json?limit=15000";
         try {
             const response = await fetch(commentsUrl);
@@ -582,10 +601,12 @@ export class RedditCommentsPage extends LitElement {
         return html`<div class="${pageContainerStyle} overflow-auto -mt-4 mb-4">
             ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
             ${this.postDom ? this.postDom.postDom : nothing}
-            ${!this.postDom && this.post
-                ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post} .noDrillDown=${true}></reddit-post>`
+            ${!this.postDom && this.post ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post}></reddit-post>` : nothing}
+            ${this.isLoading
+                ? html`<div class="mt-4 flex items-center justify-center gap-2">
+                      <loading-spinner></loading-spinner><span>Loading comments</span>
+                  </div>`
                 : nothing}
-            ${this.isLoading ? html`<div class="mt-4"><loading-spinner></loading-spinner></div>` : nothing}
             <div class="px-4">
                 ${this.comments
                     ? map(
@@ -594,6 +615,7 @@ export class RedditCommentsPage extends LitElement {
                       )
                     : nothing}
             </div>
+            ${this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0 ? html`<div class="w-full h-screen"></div>` : nothing}
         </div>`;
     }
 
