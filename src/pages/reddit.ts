@@ -161,11 +161,11 @@ export function renderVideo(videoDesc: { width: number; height: number; urls: st
 }
 @customElement("video-player")
 export class VideoPlayer extends LitElement {
-    static count = 0;
+    @property()
+    videoDesc?: { width: number; height: number; urls: string[] };
 
-    @property() videoDesc?: { width: number; height: number; urls: string[] };
-    @property() loop = false;
-    originalPositionStyle = {};
+    @property()
+    loop = false;
 
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
@@ -190,6 +190,15 @@ export class VideoPlayer extends LitElement {
         };
         videoElement.addEventListener("click", togglePlay);
         onTapped(videoElement, togglePlay);
+
+        document.addEventListener("scroll", () => {
+            if (videoElement && videoElement === document.pictureInPictureElement) {
+                return;
+            }
+            if (!video.paused() && !intersectsViewport(videoElement) && !location.pathname.includes("/r/comments")) {
+                video.pause();
+            }
+        });
     }
 
     render() {
