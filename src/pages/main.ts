@@ -44,35 +44,45 @@ export class MainPage extends LitElement {
                 <h2 class="text-center">ledit</h2>
                 <div class="absolute -top-4 right-0 flex items-center">
                     <theme-toggle class="w-10 h-10"></theme-toggle>
-                    <a href="/settings" class="w-10 h-10 flex items-center justify-center"
-                        ><i class="icon w-6 h-6 fill-black dark:fill-white">${settingsIcon}</i></a
-                    >
                 </div>
-                <div class="flex flex-col">
-                    <h2 class="text-muted-fg flex items-center pl-4">
-                        <span>Subreddits</span>
-                        <button class="ml-auto -mr-1 w-10 h-10 flex items-center justify-center" @click=${() => this.search()}>
-                            <i class="icon w-5 h-5 fill-primary">${searchIcon}</i>
-                        </button>
-                        <button class="w-10 h-10 flex items-center justify-center" @click=${() => this.newSubreddit()}>
-                            <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
-                        </button>
-                    </h2>
-                    <div class="flex flex-col">
-                        ${map(
-                            subreddits,
-                            (subreddit) => html`
-                                <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
-                                    <a class="flex-grow truncate" href="/r/${subreddit.subreddits.join("+")}">${subreddit.label}</a>
-                                    <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.editSubreddit(subreddit)}>
-                                        <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
-                                    </button>
-                                    <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.deleteSubreddit(subreddit)}>
-                                        <i class="icon w-6 h-6 fill-primary">${minusIcon}</i>
-                                    </button>
-                                </div>
-                            `
-                        )}
+                <div class="w-full max-w-[480px] mx-auto flex flex-col">
+                    <div class="flex flex-col pb-4 border-b border-divider">
+                        <h2 class="text-muted-fg flex items-center pl-4">
+                            <span>Reddit</span>
+                            <button class="ml-auto -mr-1 w-10 h-10 flex items-center justify-center" @click=${() => this.search()}>
+                                <i class="icon w-5 h-5 fill-primary">${searchIcon}</i>
+                            </button>
+                            <button class="w-10 h-10 flex items-center justify-center" @click=${() => this.newSubreddit()}>
+                                <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
+                            </button>
+                        </h2>
+                        <div class="flex flex-col">
+                            ${map(
+                                subreddits,
+                                (subreddit) => html`
+                                    <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
+                                        <a class="flex-grow truncate" href="/r/${subreddit.subreddits.join("+")}">${subreddit.label}</a>
+                                        <button
+                                            class="ml-auto w-6 h-6 flex items-center justify-center"
+                                            @click=${() => this.editSubreddit(subreddit)}
+                                        >
+                                            <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
+                                        </button>
+                                        <button
+                                            class="ml-auto w-6 h-6 flex items-center justify-center"
+                                            @click=${() => this.deleteSubreddit(subreddit)}
+                                        >
+                                            <i class="icon w-6 h-6 fill-primary">${minusIcon}</i>
+                                        </button>
+                                    </div>
+                                `
+                            )}
+                        </div>
+                    </div>
+                    <div class="flex flex-col pt-4">
+                        <h2 class="text-muted-fg flex items-center pl-4">
+                            <a href="/hn">Hackernews</a>
+                        </h2>
                     </div>
                 </div>
             </div>

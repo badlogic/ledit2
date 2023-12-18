@@ -134,6 +134,22 @@
         font-size: 0.8em;
         line-height: 1em;
     }
+
+    hackernews-comment p {
+        @apply pb-2;
+    }
+
+    hackernews-comment p:last-child {
+        @apply pb-0;
+    }
+
+    hackernews-post p {
+        @apply pb-2;
+    }
+
+    hackernews-post p:last-child {
+        @apply pb-0;
+    }
 }
 
 @layer utilities {

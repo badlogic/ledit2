@@ -5,13 +5,15 @@ import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit
 import { router } from "../utils/routing.js";
 import { formatDate, formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { closeButton, dom, fixLinksAndVideos, onVisibleOnce, renderError, renderTopbar } from "../app.js";
+import { closeButton, dom, fixLinksAndVideos, getScrollParent, onVisibleOnce, renderError, renderTopbar } from "../app.js";
 import { closeIcon, eyeClosedIcon, eyeOpenIcon, infoIcon, plusIcon, replyIcon, searchIcon, speechBubbleIcon } from "../utils/icons.js";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
 import videojs from "video.js";
 import { Store } from "../utils/store.js";
+
+const postDomCache = new Map<string, HTMLElement>();
 
 function renderRedditTextContent(content?: string) {
     if (!content) return html`${nothing}`;
@@ -31,7 +33,7 @@ export function onAddedToDom(element: Element, callback: () => void) {
     checkForInsertion();
 }
 
-export function onTapped(element: HTMLElement, callback: () => void) {
+export function onTapped(element: HTMLElement, callback: (ev: Event) => void) {
     let touchStartY = 0;
 
     element.addEventListener("touchstart", (event) => {
@@ -40,7 +42,7 @@ export function onTapped(element: HTMLElement, callback: () => void) {
 
     element.addEventListener("touchend", (event) => {
         if (Math.abs(event.changedTouches[0].clientY - touchStartY) < 16) {
-            callback();
+            callback(event);
         }
     });
 }
@@ -118,7 +120,9 @@ export function renderVideo(videoDesc: { width: number; height: number; urls: st
         videoElement.style.height = "";
 
         // Toggle pause/play on click
-        const togglePlay = function () {
+        const togglePlay = function (ev: Event) {
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
             if (video.paused()) {
                 video.play();
             } else {
@@ -155,6 +159,56 @@ export function renderVideo(videoDesc: { width: number; height: number; urls: st
     });
     return videoDom;
 }
+@customElement("video-player")
+export class VideoPlayer extends LitElement {
+    static count = 0;
+
+    @property() videoDesc?: { width: number; height: number; urls: string[] };
+    @property() loop = false;
+    originalPositionStyle = {};
+
+    protected createRenderRoot(): Element | ShadowRoot {
+        return this;
+    }
+
+    firstUpdated() {
+        const videoDiv = this.querySelector("video-js")! as HTMLElement;
+        const video = videojs(videoDiv);
+        var videoElement = video.el().querySelector("video")!;
+        (videoDiv as any).player = video;
+
+        // Toggle pause/play on click
+        const togglePlay = function (ev: Event) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            if (video.paused()) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        };
+        videoElement.addEventListener("click", togglePlay);
+        onTapped(videoElement, togglePlay);
+    }
+
+    render() {
+        if (!this.videoDesc) return html`${nothing}`;
+        return html`
+            <div class="flex justify-center w-full cursor-pointer" style="position: relative; display: block;">
+                <video-js
+                    controls
+                    class="video-js w-full h-auto max-h-[70vh]"
+                    style="aspect-ratio: ${this.videoDesc.width / this.videoDesc.height};"
+                    ?loop=${this.loop}
+                    data-setup="{}"
+                >
+                    ${this.videoDesc.urls.map((url) => html`<source src="${unescapeHtml(url)}" />`)}
+                </video-js>
+            </div>
+        `;
+    }
+}
 
 @customElement("reddit-stream-view")
 export class RedditStreamView extends StreamView<RedditPost> {
@@ -172,9 +226,13 @@ export class RedditStreamView extends StreamView<RedditPost> {
             const seen = Store.getSeen();
             if (seen.has(item.data.id)) hide = "hidden";
         }
-        return html`<div class="${hide} py-4 border-b border-divider">
-            <reddit-post .post=${item}></reddit-post>
-        </div>`;
+        const postDom = dom(html`<div>
+            <div class="${hide} py-4 border-b border-divider">
+                <reddit-post .post=${item}></reddit-post>
+            </div>
+        </div>`)[0];
+        postDomCache.set(item.data.id, postDom.children[0] as HTMLElement);
+        return html`${postDom}`;
     }
 }
 
@@ -280,7 +338,8 @@ export class RedditPostView extends LitElement {
             if (post.secure_media.reddit_video.dash_url) embed.urls.push(unescapeHtml(post.secure_media.reddit_video.dash_url)!);
             if (post.secure_media.reddit_video.hls_url) embed.urls.push(unescapeHtml(post.secure_media.reddit_video.hls_url)!);
             if (post.secure_media.reddit_video.fallback_url) embed.urls.push(unescapeHtml(post.secure_media.reddit_video.fallback_url)!);
-            return renderVideo(embed, false);
+            // return renderVideo(embed, false);
+            return html`<video-player class="w-full" .videoDesc=${embed} .loop=${false}></video-player>`;
         }
 
         // External embed like YouTube Vimeo
@@ -337,7 +396,8 @@ export class RedditPostView extends LitElement {
             if (post.preview.reddit_video_preview.dash_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.dash_url)!);
             if (post.preview.reddit_video_preview.hls_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.hls_url)!);
             if (post.preview.reddit_video_preview.fallback_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.fallback_url)!);
-            return renderVideo(video, post.preview.reddit_video_preview.is_gif);
+            //return renderVideo(video, post.preview.reddit_video_preview.is_gif);
+            return html`<video-player class="w-full" .videoDesc=${video} .loop=${post.preview.reddit_video_preview.is_gif}></video-player>`;
         }
 
         // Fallback to thumbnail which is super low-res.
@@ -376,10 +436,9 @@ export class RedditPostView extends LitElement {
                     <span>${post.author}</span>
                     <span>•</span>
                     <span>${getTimeDifference(post.created_utc * 1000)}
-                    <span>${post.id}</span>
                 </div>
             </div>
-            <div class="flex items-center justify-center">${this.renderContent(this.post)}</div>
+            <div class="flex items-center justify-center w-full">${this.renderContent(this.post)}</div>
             <div class="px-4 flex gap-4 items-center -mb-2">
                 <a href="/r/comments${post.permalink}" @click=${(ev: Event) => {
             if (this.noDrillDown) {
@@ -469,6 +528,7 @@ export class RedditCommentsPage extends LitElement {
 
     permalink: string;
     post?: RedditPost;
+    postDom?: { originalParent: HTMLElement; postDom: HTMLElement };
     comments: RedditComment[] = [];
 
     constructor() {
@@ -484,13 +544,26 @@ export class RedditCommentsPage extends LitElement {
     protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
         super.firstUpdated(_changedProperties);
         this.load();
+        getScrollParent(this)!.scrollTop = 0;
     }
 
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
         fixLinksAndVideos(this);
     }
 
+    disconnectedCallback(): void {
+        if (this.postDom) {
+            this.postDom.originalParent.append(this.postDom.postDom);
+        }
+    }
+
     async load() {
+        const postId = this.permalink.split("/")[3];
+        const postDom = postDomCache.get(postId);
+        if (postDom) {
+            this.postDom = { originalParent: postDom.parentElement as HTMLElement, postDom: postDom };
+            this.requestUpdate();
+        }
         const commentsUrl = "https://www.reddit.com/" + this.permalink + ".json?limit=15000";
         try {
             const response = await fetch(commentsUrl);
@@ -512,7 +585,7 @@ export class RedditCommentsPage extends LitElement {
                 }
                 comments.push(comment);
             }
-            this.post = post;
+            if (!this.postDom) this.post = post;
             this.comments = comments;
         } catch (e) {
             this.error = "Couldn't load comments";
@@ -522,13 +595,13 @@ export class RedditCommentsPage extends LitElement {
     }
 
     render() {
-        return html`<div class="${pageContainerStyle} overflow-auto">
-            ${renderTopbar("Comments", closeButton())}
-            ${this.isLoading ? html`<div class="mt-12"><loading-spinner></loading-spinner></div>` : nothing}
-            ${this.error ? renderError(this.error) : nothing}
-            ${this.post
+        return html`<div class="${pageContainerStyle} overflow-auto -mt-4">
+            ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
+            ${this.postDom ? this.postDom.postDom : nothing}
+            ${!this.postDom && this.post
                 ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post} .noDrillDown=${true}></reddit-post>`
                 : nothing}
+            ${this.isLoading ? html`<div class="mt-4"><loading-spinner></loading-spinner></div>` : nothing}
             <div class="px-4">
                 ${this.comments
                     ? map(
