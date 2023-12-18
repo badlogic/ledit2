@@ -275,7 +275,7 @@ export class RedditPostView extends LitElement {
             }
             const imageUrls = images.map((img) => unescapeHtml(img.u)!);
             const imgDom = dom(html`<div class="relative" @click=${(ev: Event) => showGallery(ev, imageUrls)}>
-                <img src="${imageUrls[0]}" />
+                <img class="md:px-4 max-h-[50vh]" src="${imageUrls[0]}" />
                 <div class="absolute left-0 bottom-0 disable-pointer-events text-xs p-2 bg-[#111]/80 text-white">${imageUrls.length} images</div>
             </div>`)[0];
             return imgDom;
@@ -288,7 +288,7 @@ export class RedditPostView extends LitElement {
             if (post.secure_media.reddit_video.hls_url) embed.urls.push(unescapeHtml(post.secure_media.reddit_video.hls_url)!);
             if (post.secure_media.reddit_video.fallback_url) embed.urls.push(unescapeHtml(post.secure_media.reddit_video.fallback_url)!);
             // return renderVideo(embed, false);
-            return html`<video-player class="w-full" .videoDesc=${embed} .loop=${false}></video-player>`;
+            return html`<video-player class="w-full md:px-4" .videoDesc=${embed} .loop=${false}></video-player>`;
         }
 
         // External embed like YouTube Vimeo
@@ -299,12 +299,13 @@ export class RedditPostView extends LitElement {
             if (embed.content.includes("iframe")) {
                 const embedUrl = unescapeHtml(
                     embed.content
-                        .replace(`width="${embed.width}"`, `width="${embedWidth}"`)
-                        .replace(`height="${embed.height}"`, `height="${embedHeight}"`)
+                        .replace(`width="${embed.width}"`, "")
+                        .replace(`height="${embed.height}"`, "")
                         .replace("position:absolute;", "")
+                        .replace(";iframe", `;iframe class="w-full h-full" `)
                 );
                 const embedHtml = safeHTML(embedUrl!);
-                let embedDom = dom(html`<div width="${embedWidth}" height="${embedHeight}">${embedHtml}</div>`)[0];
+                let embedDom = dom(html`<div class="md:px-4 w-full" style="aspect-ratio: ${embedWidth}/${embedHeight};">${embedHtml}</div>`)[0];
                 // Make YouTube videos stop if they scroll out of frame.
                 if (embed.content.includes("youtube")) {
                     // Pause when out of view
@@ -314,7 +315,7 @@ export class RedditPostView extends LitElement {
                 }
             } else {
                 return dom(
-                    html`<div width="${embedWidth}" height="${embedHeight}">
+                    html`<div class="md:px-4 w-full" style="aspect-ratio: ${embedWidth}/${embedHeight};">
                         <iframe width="${embedWidth}" height="${embedHeight}" src="${unescapeHtml(embed.media_domain_url)}"></iframe>
                     </div>`
                 )[0];
@@ -323,7 +324,14 @@ export class RedditPostView extends LitElement {
 
         // Plain old .gif
         if (post.url.endsWith(".gif")) {
-            return dom(html`<img src="${unescapeHtml(post.url)}" @click=${(ev: Event) => showGallery(ev, [unescapeHtml(post.url)])} /> />`)[0];
+            return dom(
+                html`<img
+                        class="md:px-4 max-h-[50vh]"
+                        src="${unescapeHtml(post.url)}"
+                        @click=${(ev: Event) => showGallery(ev, [unescapeHtml(post.url)])}
+                    />
+                    />`
+            )[0];
         }
 
         // Image, pick the one that's one size above the current posts width so pinch zooming
@@ -337,7 +345,7 @@ export class RedditPostView extends LitElement {
             if (!image) return document.createElement("div");
             if (!post.preview.reddit_video_preview?.fallback_url)
                 return html`<img
-                    class="max-h-[50vh]"
+                    class="md:px-4 max-h-[50vh]"
                     src="${unescapeHtml(image.url)}"
                     @click=${(ev: Event) => showGallery(ev, [unescapeHtml(image!.url)])}
                 />`;
@@ -346,7 +354,7 @@ export class RedditPostView extends LitElement {
             if (post.preview.reddit_video_preview.hls_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.hls_url)!);
             if (post.preview.reddit_video_preview.fallback_url) video.urls.push(unescapeHtml(post.preview.reddit_video_preview.fallback_url)!);
             //return renderVideo(video, post.preview.reddit_video_preview.is_gif);
-            return html`<video-player class="w-full" .videoDesc=${video} .loop=${post.preview.reddit_video_preview.is_gif}></video-player>`;
+            return html`<video-player class="w-full md:px-4" .videoDesc=${video} .loop=${post.preview.reddit_video_preview.is_gif}></video-player>`;
         }
 
         // Fallback to thumbnail which is super low-res.
@@ -355,7 +363,7 @@ export class RedditPostView extends LitElement {
         if (post.thumbnail && !missingThumbnailTags.has(post.thumbnail)) {
             return html`
                 <img
-                    class="max-h-[50vh]"
+                    class="md:px-4 max-h-[50vh]"
                     src="${unescapeHtml(thumbnailUrl)}"
                     @click=${(ev: Event) => showGallery(ev, [unescapeHtml(thumbnailUrl)])}
                 />
