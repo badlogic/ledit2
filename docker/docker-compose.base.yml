@@ -16,12 +16,28 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        stop_grace_period: 0s
+        stop_grace_period: 2s
         environment:
             PORT: 3333
+            DATABASE: ledit_db
+            DATABASE_USER: ledit_db_user
+            DATABASE_PASSWORD: ${LEDIT_DB_PASSWORD}
         volumes:
             - ./data:/data
             - ../:/app
+        links:
+            - db
+        networks:
+            - network
+    db:
+        image: postgres:16-alpine
+        restart: always
+        environment:
+            POSTGRES_DB: ledit_db
+            POSTGRES_USER: ledit_db_user
+            POSTGRES_PASSWORD: ${LEDIT_DB_PASSWORD}
+        volumes:
+            - ./data/postgres:/var/lib/postgresql/data
         networks:
             - network
 
