@@ -1,11 +1,11 @@
 import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { RedditSorting, RedditStream } from "../apis/reddit.js";
-import { fixLinksAndVideos, renderError, dom, renderTopbar, closeButton } from "../app.js";
+import { fixLinksAndVideos, renderError, dom, renderTopbar, closeButton, onVisibleOnce } from "../app.js";
 import { eyeOpenIcon, eyeClosedIcon, speechBubbleIcon, replyIcon } from "../utils/icons.js";
 import { router } from "../utils/routing.js";
 import { Store } from "../utils/store.js";
-import { pageContainerStyle } from "../utils/styles.js";
+import { pageContainerStyle, pageContentStyle } from "../utils/styles.js";
 import {
     HackerNewsComment,
     HackerNewsPost,
@@ -37,6 +37,20 @@ export class HackerNewsPostView extends LitElement {
         return this;
     }
 
+    protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+        super.firstUpdated(_changedProperties);
+        onVisibleOnce(
+            this,
+            () => {
+                const seen = new Set<string>(Store.getSeen());
+                seen.add(this.post!.id.toString());
+                Store.setSeen(seen);
+            },
+            "0px",
+            0
+        );
+    }
+
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
         super.updated(_changedProperties);
         fixLinksAndVideos(this);
@@ -46,11 +60,13 @@ export class HackerNewsPostView extends LitElement {
         const post = this.post;
         if (!post) return renderError("Post does not exist");
 
+        const collapse = Store.getCollapseSeen() && Store.getSeen().has(post.id.toString());
+
         return html`<div class="py-2 border-b border-divider flex flex-col cursor-pointer" @click=${() => {
             router.push("/hn/comments/" + post.id);
         }}>
             <div class="flex flex-col">
-                <a href="${post.url}" class="px-4 text-black dark:text-white font-semibold">${post.title}</a>
+                <a href="${post.url}" class="${collapse ? "text-muted-fg" : ""} px-4 text-black dark:text-white font-semibold">${post.title}</a>
                 <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                     <span>${formatNumber(post.points)} pts</span>
                     <span>•</span>
@@ -84,13 +100,21 @@ export class HackerNewsPostView extends LitElement {
 
 @customElement("hackernews-stream-view")
 export class HackerNewsStreamView extends StreamView<HackerNewsPost> {
+    @property()
+    hideSeen = false;
+
     constructor() {
         super();
         this.wrapItem = false;
     }
 
     renderItem(item: HackerNewsPost, polledItems: boolean): TemplateResult {
-        return html`<hackernews-post .post=${item}></hackernews-post>`;
+        let hide = "";
+        if (this.hideSeen) {
+            const seen = Store.getSeen();
+            if (seen.has(item.id.toString())) hide = "hidden";
+        }
+        return html`<hackernews-post class="${hide}" .post=${item}></hackernews-post>`;
     }
 }
 
@@ -140,7 +164,10 @@ export class HackerNewsPage extends LitElement {
         const stream = dom(
             html`<hackernews-stream-view .hideSeen=${this.hideSeen} .stream=${new HackerNewsStream(this.sorting)}></hackernews-stream-view>`
         );
-        return html`<div class="${pageContainerStyle}">${renderTopbar("Hackernews", closeButton(), buttons)} ${stream}</div> `;
+        return html`<div class="${pageContainerStyle}">
+            ${renderTopbar("Hackernews", closeButton(), buttons)}
+            <div class="${pageContentStyle}">${stream}</div>
+        </div> `;
     }
 }
 
@@ -194,18 +221,20 @@ export class HackerNewsCommentsPage extends LitElement {
     }
 
     render() {
-        return html`<div class="${pageContainerStyle} overflow-auto">
+        return html` <div class="${pageContainerStyle}">
             ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
-            ${this.post ? html`<hackernews-post .post=${this.post} .showContent=${true} .noDrillDown=${true}></hackernews-post>` : nothing}
-            ${this.isLoading ? html`<div class="mt-12"><loading-spinner></loading-spinner></div>` : nothing}
-            <div class="px-4 -mt-1">
-                ${this.comments
-                    ? map(
-                          this.comments,
-                          (comment) =>
-                              html`<hackernews-comment .comment=${comment} .isRoot=${true} .opAuthor=${this.post?.author}></hackernews-comment>`
-                      )
-                    : nothing}
+            <div class="${pageContentStyle}">
+                ${this.post ? html`<hackernews-post .post=${this.post} .showContent=${true} .noDrillDown=${true}></hackernews-post>` : nothing}
+                ${this.isLoading ? html`<div class="mt-12"><loading-spinner></loading-spinner></div>` : nothing}
+                <div class="px-4 -mt-1">
+                    ${this.comments
+                        ? map(
+                              this.comments,
+                              (comment) =>
+                                  html`<hackernews-comment .comment=${comment} .isRoot=${true} .opAuthor=${this.post?.author}></hackernews-comment>`
+                          )
+                        : nothing}
+                </div>
             </div>
         </div>`;
     }

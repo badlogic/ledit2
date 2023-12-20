@@ -5,7 +5,7 @@ import { closeButton, fixLinksAndVideos, renderError, renderTopbar } from "../ap
 import { i18n } from "../utils/i18n.js";
 import { router } from "../utils/routing.js";
 import { pageContainerStyle } from "../utils/styles.js";
-import { linkIcon, minusIcon, pencilIcon, plusIcon, searchIcon, settingsIcon } from "../utils/icons.js";
+import { favIcon, linkIcon, minusIcon, pencilIcon, plusIcon, searchIcon, settingsIcon } from "../utils/icons.js";
 import { map } from "lit/directives/map.js";
 import { Store, Subreddit } from "../utils/store.js";
 import { state } from "../appstate.js";
@@ -47,20 +47,27 @@ export class MainPage extends LitElement {
             { label: "Show Hackernews", value: "/hn/showstories" },
             { label: "Jobs", value: "/hn/jobstories" },
         ];
+
+        const cardStyle = `flex flex-col border-t sm:border border-divider sm:rounded-md sm:fancy-shadow overflow-x-clip`;
+        const cardTitleStyle = `text-muted-fg h-10 flex items-center pl-4 border-b border-divider`;
+        const cardItemStyle = `flex items-center gap-2 py-2 pl-4 pr-2 border-b border-divider last:border-none hover:bg-muted cursor-pointer`;
+
         return html`<div class="${pageContainerStyle}">
-            <div class="relative flex flex-col md:gap-2 w-full max-w-[480px] mx-auto">
+            <div class="relative flex flex-col sm:gap-2 w-full max-w-[480px] mx-auto">
                 <div class="flex items-center">
-                    <div class="self-center text-lg font-semibold px-2 py-1 text-primary text-center flex gap-1 items-center justify-center">
-                        <i class="icon w-6 h-6 fill-primary">${linkIcon}</i><span>ledit</span>
+                    <div class="self-center text-lg font-semibold px-2 text-primary text-center flex gap-1 items-center justify-center">
+                        <i class="icon w-10 h-10 fill-primary">${favIcon}</i><span>ledit</span>
                     </div>
                     <div class="ml-auto flex">
-                        <a href="/settings" class="w-10 h-10 flex items-center justify-center"><i class="icon w-5 h-5">${settingsIcon}</i></a>
+                        <a href="/settings" class="w-10 h-10 flex items-center justify-center"
+                            ><i class="icon w-5 h-5 fill-black dark:fill-white">${settingsIcon}</i></a
+                        >
                         <theme-toggle class="w-10 h-10"></theme-toggle>
                     </div>
                 </div>
-                <div class="w-full mx-auto flex flex-col md:gap-4">
-                    <div class="flex flex-col border border-divider md:rounded-md md:fancy-shadow overflow-x-clip">
-                        <h2 class="text-muted-fg flex items-center pl-4 border-b border-divider">
+                <div class="w-full mx-auto flex flex-col sm:gap-4">
+                    <div class="${cardStyle}">
+                        <h2 class="${cardTitleStyle}">
                             <span>Reddit</span>
                             <button class="ml-auto -mr-1 w-10 h-10 flex items-center justify-center" @click=${() => this.search()}>
                                 <i class="icon w-5 h-5 fill-primary">${searchIcon}</i>
@@ -72,7 +79,7 @@ export class MainPage extends LitElement {
                         ${map(
                             subreddits,
                             (subreddit) => html`
-                                <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
+                                <div class="${cardItemStyle}">
                                     <a class="flex-grow truncate" href="/r/${subreddit.subreddits.join("+")}">${subreddit.label}</a>
                                     <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.editSubreddit(subreddit)}>
                                         <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
@@ -84,14 +91,14 @@ export class MainPage extends LitElement {
                             `
                         )}
                     </div>
-                    <div class="flex flex-col border border-divider md:rounded-md md:fancy-shadow overflow-x-clip">
-                        <h2 class="text-muted-fg h-10 flex items-center pl-4 border-b border-divider">
+                    <div class="${cardStyle}">
+                        <h2 class="${cardTitleStyle}">
                             <span>Hackernews</span>
                         </h2>
                         ${map(
                             hnTopics,
                             (topic) => html`
-                                <div class="flex items-center hover:bg-muted rounded py-2 pl-4 pr-2 gap-2 cursor-pointer">
+                                <div class="${cardItemStyle}">
                                     <a class="flex-grow truncate" href="${topic.value}">${topic.label}</a>
                                 </div>
                             `

@@ -151,7 +151,7 @@ export abstract class StreamView<T> extends LitElement {
         return html`
             <div class="relative flex flex-col">
                 <div id="list" class="w-full h-full"></div>
-                <loading-spinner class="w-full" id="spinner"></loading-spinner>
+                <loading-spinner class="w-full py-2" id="spinner"></loading-spinner>
             </div>
         `;
     }

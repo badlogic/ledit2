@@ -4,7 +4,7 @@ import { RedditComment, RedditComments, RedditPost, RedditSearchStream, RedditSo
 import { LitElement, PropertyValueMap, TemplateResult, html, nothing } from "lit";
 import { router } from "../utils/routing.js";
 import { formatDate, formatNumber, getTimeDifference, unescapeHtml } from "../utils/utils.js";
-import { pageContainerStyle } from "../utils/styles.js";
+import { pageContainerStyle, pageContentStyle } from "../utils/styles.js";
 import {
     closeButton,
     dom,
@@ -235,6 +235,11 @@ export class RedditPostView extends LitElement {
         const post = this.post.data;
         const collapse = Store.getCollapseSeen() && Store.getSeen().has(post.id) && !this.expanded;
         const content = collapse ? undefined : this.renderContent(this.post);
+        const title = dom(
+            html`<a href="${post.url}" class="px-4 ${collapse ? "text-muted-fg" : "text-black dark:text-white"} font-semibold"
+                >${unescapeHtml(post.title)}</a
+            >`
+        )[0];
 
         return html`<div class="flex flex-col ${content ? "gap-1" : ""} cursor-pointer" @click=${(ev: Event) => {
             if (collapse) {
@@ -244,9 +249,7 @@ export class RedditPostView extends LitElement {
             }
         }}>
             <div class="flex flex-col ${content ? "mb-2" : ""}">
-                <a href="${post.url}" class="px-4 ${collapse ? "text-muted-fg" : "text-black dark:text-white"} font-semibold">${unescapeHtml(
-            post.title
-        )}</a>
+                ${title}
                 <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                     <span>${formatNumber(post.score)} pts</span>
                     <span>•</span>
@@ -292,7 +295,7 @@ export class RedditPostView extends LitElement {
 
         // Self post, show text, dim it, cap vertical size, and make it expand on click.
         if (post.is_self) {
-            if (post.selftext_html.trim().length == 0) return html`${nothing}`;
+            if (!post.selftext_html || post.selftext_html.trim().length == 0) return undefined;
             const selfContent = dom(html`<div class="px-4 flex flex-col">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
             onVisibleOnce(selfContent, () => {
                 const maxHeight = 150;
@@ -520,7 +523,8 @@ export class RedditPage extends LitElement {
         const subreddit = Store.getSubreddits()!.find((sub) => sub.subreddits.join("+") == this.subreddit);
 
         return html`<div class="${pageContainerStyle}">
-            ${renderTopbar("r/" + (subreddit ? subreddit.label : this.subreddit), closeButton(), buttons)} ${stream}
+            ${renderTopbar("r/" + (subreddit ? subreddit.label : this.subreddit), closeButton(), buttons)}
+            <div class="${pageContentStyle}">${stream}</div>
         </div> `;
     }
 }
@@ -557,7 +561,7 @@ export class RedditCommentsPage extends LitElement {
         super.firstUpdated(_changedProperties);
         this.load();
         if (this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0) {
-            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? -40 : 0);
+            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? 0 : 0);
         } else {
             getScrollParent(this)!.scrollTop = 0;
         }
@@ -614,24 +618,29 @@ export class RedditCommentsPage extends LitElement {
         if (player) {
             player.disableAutoPause = true;
         }
-        return html`<div class="${pageContainerStyle} overflow-auto -mt-4 mb-4">
+        return html`<div class="${pageContainerStyle} -mt-4">
             ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
-            ${this.postDom ? this.postDom.postDom : nothing}
-            ${!this.postDom && this.post ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post}></reddit-post>` : nothing}
-            ${this.isLoading
-                ? html`<div class="mt-4 flex items-center justify-center gap-2">
-                      <loading-spinner></loading-spinner><span>Loading comments</span>
-                  </div>`
-                : nothing}
-            <div class="px-4">
-                ${this.comments
-                    ? map(
-                          this.comments,
-                          (comment) => html`<reddit-comment .comment=${comment} .isRoot=${true} .opAuthor=${this.post?.data.author}></reddit-comment>`
-                      )
+            <div class="${pageContentStyle}">
+                ${this.postDom ? this.postDom.postDom : nothing}
+                ${!this.postDom && this.post
+                    ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post}></reddit-post>`
                     : nothing}
+                ${this.isLoading
+                    ? html`<div class="mt-4 flex items-center justify-center gap-2">
+                          <loading-spinner></loading-spinner><span>Loading comments</span>
+                      </div>`
+                    : nothing}
+                <div class="px-4">
+                    ${this.comments
+                        ? map(
+                              this.comments,
+                              (comment) =>
+                                  html`<reddit-comment .comment=${comment} .isRoot=${true} .opAuthor=${this.post?.data.author}></reddit-comment>`
+                          )
+                        : nothing}
+                </div>
+                ${this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0 ? html`<div class="w-full h-screen"></div>` : nothing}
             </div>
-            ${this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0 ? html`<div class="w-full h-screen"></div>` : nothing}
         </div>`;
     }
 

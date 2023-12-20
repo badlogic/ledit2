@@ -117,6 +117,9 @@ import eyeOpenIconSvg from "remixicon/icons/System/eye-line.svg";
 // @ts-ignore
 import eyeClosedIconSvg from "remixicon/icons/System/eye-off-line.svg";
 
+// @ts-ignore
+import favIconSvg from "../../html/favicon.svg";
+
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 
 export const settingsIcon = unsafeHTML(settingsIconSvg);
@@ -178,3 +181,4 @@ export const playIcon = unsafeHTML(playIconSvg);
 export const pencilIcon = unsafeHTML(pencilIconSvg);
 export const eyeOpenIcon = unsafeHTML(eyeOpenIconSvg);
 export const eyeClosedIcon = unsafeHTML(eyeClosedIconSvg);
+export const favIcon = unsafeHTML(favIconSvg);

@@ -1,7 +1,7 @@
 import { TemplateResult } from "lit";
 import { Key, pathToRegexp } from "path-to-regexp";
 import { StreamView } from "./streamviews.js";
-import { dom } from "./ui-components.js";
+import { dom, getScrollParent } from "./ui-components.js";
 
 export class Route<T extends HTMLElement> {
     readonly regexp: RegExp;
@@ -25,6 +25,7 @@ export class Router {
     notFoundRoot = "/404";
     currPage = 0;
     modal?: HTMLElement;
+    outlet = document.body;
 
     constructor() {
         window.addEventListener("popstate", (ev) => this.handleNavigation(ev));
@@ -81,7 +82,7 @@ export class Router {
     pushModal(modal: HTMLElement) {
         this.modal = modal;
         this.currPage++;
-        document.body.append(modal);
+        this.outlet.append(modal);
         history.pushState({ page: this.pageStack.length }, "", location.href);
     }
 
@@ -119,6 +120,10 @@ export class Router {
         return this.pageStack.length > 0 ? this.pageStack[this.pageStack.length - 1] : undefined;
     }
 
+    setOutlet(outlet: HTMLElement) {
+        this.outlet = outlet;
+    }
+
     private navigateTo(path: string, prerenderedPage?: HTMLElement) {
         const route = this.matchRoute(path);
         if (!route) {
@@ -135,7 +140,7 @@ export class Router {
         } else {
             const page = prerenderedPage ?? route.route.renderPage();
             if (lastPage) {
-                lastPage.srcollTop = document.documentElement.scrollTop;
+                lastPage.srcollTop = getScrollParent(this.outlet)!.scrollTop;
                 lastPage.display = lastPage.page.style.display;
                 const streamViews = Array.from(lastPage.page.querySelectorAll("*")).filter((el) => el instanceof StreamView) as StreamView<any>[];
                 for (const streamView of streamViews) streamView.disableIntersector = true;
@@ -143,7 +148,7 @@ export class Router {
             }
             const pageDom = page instanceof HTMLElement ? page : dom(page)[0];
             this.pageStack.push({ route: route.route, page: pageDom, srcollTop: 0, display: pageDom.style.display });
-            document.body.append(pageDom);
+            this.outlet.append(pageDom);
         }
     }
 
@@ -180,7 +185,7 @@ export class Router {
                     const streamViews = Array.from(page.page.querySelectorAll("*")).filter((el) => el instanceof StreamView) as StreamView<any>[];
                     for (const streamView of streamViews) streamView.disableIntersector = false;
                     page.page.style.display = page.display;
-                    queueMicrotask(() => (document.documentElement.scrollTop = page.srcollTop));
+                    queueMicrotask(() => (getScrollParent(this.outlet)!.scrollTop = page.srcollTop));
                 } else {
                     this.navigateTo(location.pathname);
                 }

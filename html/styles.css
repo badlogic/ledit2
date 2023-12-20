@@ -43,7 +43,7 @@
 @layer base {
     html,
     body {
-        @apply w-full leading-normal;
+        @apply leading-normal;
     }
 
     .hidden {
@@ -153,6 +153,12 @@
 
     hackernews-post p:last-child {
         @apply pb-0;
+    }
+
+    pre {
+        font-size: 12px;
+        padding-bottom: 16px;
+        overflow: auto;
     }
 }
 
