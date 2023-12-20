@@ -649,7 +649,7 @@ export class Topbar extends LitElement {
 
     render() {
         return html`
-            <div class="fixed top-0 z-10 w-full h-10 flex items-center bg-[#fff]/60 dark:bg-[#111]/60 backdrop-blur-[8px]">
+            <div class="fixed top-0 left-0 z-10 w-screen h-10 flex items-center bg-[#fff]/60 dark:bg-[#111]/60 backdrop-blur-[8px]">
                 <div class="w-full ${this.limitWidth ? "max-w-[640px]" : ""} mx-auto h-10 pr-4 flex items-center">
                     <div class="flex-shrink-0">${this.closeButton}</div>
                     ${this.heading instanceof HTMLElement

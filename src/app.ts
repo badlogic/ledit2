@@ -54,14 +54,12 @@ export class App extends LitElement {
         );
         router.addRoute("/new/subreddit", () => html`<subreddit-editor></subreddit-editor>`);
         router.addRoute("/edit/subreddit/:label", () => html`<subreddit-editor></subreddit-editor>`);
-        router.addRoute("/search/reddit/:query?", () => html`<subreddit-search></subreddit-search>`);
 
         router.addRoute("/hn/comments/:id", () => html`<hackernews-comments-page></hackernews-comments-page>`);
         router.addRoute("/hn/:sorting?", () => html`<hackernews-page></hackernews-page>`);
 
         router.setRootRoute("/");
         router.setNotFoundRoot("/404");
-        router.setOutlet(document.querySelector<HTMLElement>("main")!);
         router.replace(location.pathname);
     }
 }

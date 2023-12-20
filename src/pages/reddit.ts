@@ -22,7 +22,8 @@ import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
 import { map } from "lit/directives/map.js";
 import DOMPurify from "dompurify";
 import videojs from "video.js";
-import { Store } from "../utils/store.js";
+import { Store, Subreddit } from "../utils/store.js";
+import { state } from "../appstate.js";
 
 const postDomCache = new Map<string, HTMLElement>();
 let lastPostBoundingRect: DOMRect | undefined;
@@ -561,7 +562,7 @@ export class RedditCommentsPage extends LitElement {
         super.firstUpdated(_changedProperties);
         this.load();
         if (this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0) {
-            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? 40 : 0);
+            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? -40 : 0);
         } else {
             getScrollParent(this)!.scrollTop = 0;
         }
@@ -741,6 +742,9 @@ export class SubredditView extends LitElement {
     @property()
     subreddit?: RedditSubreddit;
 
+    @property()
+    itemButtons = (view: SubredditView): TemplateResult => html`${nothing}`;
+
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
     }
@@ -760,13 +764,9 @@ export class SubredditView extends LitElement {
             <div class="w-full flex flex-col">
                 <div class="w-full flex items-center">
                     <a href="${sub.url}" class="truncate">${sub.title}</a>
-                    ${inBookmark
-                        ? nothing
-                        : html`<button class="ml-auto -mr-2 w-10 h-10 flex items-center justify-center" @click=${() => this.newSubreddit()}>
-                              <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
-                          </button>`}
+                    ${this.itemButtons(this)}
                 </div>
-                <div class="flex gap-2 text-xs text-muted-fg">
+                <div class="flex gap-2 text-xs text-muted-fg mb-1">
                     <span class="flex gap-2 text-xs text-muted-fg">${sub.url.substring(1)}</span>
                     <span>${formatNumber(sub.subscribers)} subscribers</span>
                     <span>${getTimeDifference(sub.created_utc * 1000)}</span>
@@ -787,41 +787,36 @@ export class SubredditView extends LitElement {
 
 @customElement("reddit-search-stream-view")
 export class RedditSearchStreamView extends StreamView<RedditSubreddit> {
+    @property()
+    filter = (subreddit: RedditSubreddit) => true;
+
+    @property()
+    itemButtons = (view: SubredditView): TemplateResult => html`${nothing}`;
+
     constructor() {
         super();
         this.wrapItem = false;
     }
 
     renderItem(item: RedditSubreddit, polledItems: boolean): TemplateResult {
-        return html`<subreddit-view .subreddit=${item}></subreddit-view>`;
+        if (!this.filter(item)) return html`<div></div>`;
+        return html`<subreddit-view .subreddit=${item} .itemButtons=${this.itemButtons}></subreddit-view>`;
     }
 }
 
 @customElement("subreddit-search")
-export class SubredditSearchPage extends LitElement {
+export class SubredditSearchElement extends LitElement {
     @property()
     results: any[] = [];
 
     @property()
-    initialQuery = "";
+    itemButtons = (view: SubredditView): TemplateResult => html`${nothing}`;
 
-    constructor() {
-        super();
-        const params = router.getCurrentParams();
-        if (params?.has("query")) {
-            this.initialQuery = params.get("query")!;
-        }
-    }
+    @property()
+    filter = (subreddit: RedditSubreddit) => true;
 
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
-    }
-
-    protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
-        super.firstUpdated(_changedProperties);
-        if (this.initialQuery.length > 0) {
-            this.handleSearch();
-        }
     }
 
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
@@ -830,21 +825,31 @@ export class SubredditSearchPage extends LitElement {
     }
 
     render() {
-        return html`<div class="${pageContainerStyle}">
-            ${renderTopbar("Search Subreddits", closeButton())}
-            <div class="w-full px-4 pt-2 pb-4 border-b border-divider">
-                <div class="search flex gap-2 px-4">
-                <i class="icon w-5 h-5">${searchIcon}</i>
-                <input id="search" class="flex-grow bg-none active:bg-none" placeholder="Topics, keywords, ..." @input=${() =>
-                    this.handleSearch()} value=${this.initialQuery}/>
-                <button><i class="ml-auto icon w-5 h-5" @click=${() => {
-                    this.querySelector<HTMLInputElement>("#search")!.value = "";
-                    this.handleSearch();
-                }}>${closeIcon}</i></div>
+        return html`
+            <div class="w-full">
+                <div class="search flex items-center gap-2 mx-4">
+                    <i class="icon w-5 h-5 -ml-2">${searchIcon}</i>
+                    <input
+                        id="search"
+                        class="flex-grow bg-none active:bg-none"
+                        placeholder="Subreddit name, topics, keywords, ..."
+                        @input=${() => this.handleSearch()}
+                    />
+                    <button class="-mr-2">
+                        <i
+                            class="ml-auto icon w-5 h-5"
+                            @click=${() => {
+                                this.querySelector<HTMLInputElement>("#search")!.value = "";
+                                this.handleSearch();
+                            }}
+                            >${closeIcon}</i
+                        >
+                    </button>
+                </div>
+                <div id="results"></div>
+                <div class="pt-4"><loading-spinner class="hidden"></loading-spinner></div>
             </div>
-            <div id="results"></div>
-            <div class="pt-4"><loading-spinner class="hidden"></loading-spinner></div>
-        </div>`;
+        `;
     }
 
     timeoutId = 0;
@@ -866,10 +871,150 @@ export class SubredditSearchPage extends LitElement {
             return;
         }
 
-        const stream = dom(html`<reddit-search-stream-view .stream=${new RedditSearchStream(query)}></reddit-search-stream-view>`)[0];
+        const stream = dom(
+            html`<reddit-search-stream-view
+                .stream=${new RedditSearchStream(query)}
+                .itemButtons=${this.itemButtons}
+                .filter=${this.filter}
+            ></reddit-search-stream-view>`
+        )[0];
         results.innerHTML = "";
         results.append(stream);
+    }
+}
 
-        router.replaceUrl("/search/reddit/" + encodeURIComponent(query));
+@customElement("subreddit-editor")
+export class SubredditEditor extends LitElement {
+    @property()
+    isLoading = false;
+
+    @property()
+    error?: string;
+
+    @property()
+    label = "";
+
+    @property()
+    subreddits = "";
+
+    subreddit?: Subreddit;
+
+    protected createRenderRoot(): Element | ShadowRoot {
+        return this;
+    }
+
+    connectedCallback(): void {
+        super.connectedCallback();
+        const params = router.getCurrentParams();
+        if (params?.get("label")) {
+            const subreddit = Store.getSubreddits()!.find((subreddit) => subreddit.label == params.get("label"));
+            if (!subreddit) {
+                this.error = "Subreddit '" + params.get("label") + "' does not exist";
+            } else {
+                this.subreddit = subreddit;
+            }
+        }
+    }
+
+    updated() {
+        fixLinksAndVideos(this);
+    }
+
+    protected firstUpdated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+        super.firstUpdated(_changedProperties);
+        this.handleInput(false);
+    }
+
+    render() {
+        const addSubreddit = (view: SubredditView) => {
+            if (!view.subreddit) return;
+            const subreddits = this.querySelector<HTMLTextAreaElement>("#subreddits")!;
+            subreddits.value += (subreddits.value.length > 0 ? "\n" : "") + view.subreddit.url.replace("/r/", "").replace("/", "");
+            view.remove();
+        };
+
+        const itemButtons = (view: SubredditView) => {
+            if (!view.subreddit) return html`${nothing}`;
+            return html`<button class="ml-auto -mr-2 w-10 h-10 flex items-center justify-center" @click=${() => addSubreddit(view)}>
+                <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
+            </button>`;
+        };
+
+        const filter = (subreddit: RedditSubreddit) => {
+            const subreddits = this.subreddits.split("\n");
+            const subName = subreddit.url.replaceAll("/r/", "").replace("/", "");
+            return !subreddits.some((sub) => sub.toLowerCase() == subName.toLowerCase());
+        };
+
+        return html`<div class="${pageContainerStyle}">
+            ${renderTopbar(this.subreddit ? "Edit Subreddit" : "New Subreddit", closeButton())}
+            <div class="${pageContentStyle} gap-4">
+                ${this.error ? renderError(this.error) : nothing}
+                <div class="flex flex-col gap-1 px-4">
+                    <span class="text-muted-fg font-semibold text-sm">Label</span>
+                    <input
+                        id="label"
+                        class="rounded bg-transparent ring-1 ring-divider outline-none px-2 py-1"
+                        id="label"
+                        @input=${() => this.handleInput()}
+                        placeholder="Subreddit label shown on main page"
+                        value="${this.subreddit?.label}"
+                    />
+                </div>
+                <div class="flex flex-col gap-1 px-4">
+                    <span class="text-muted-fg font-semibold text-sm">Subreddits</span>
+                    <textarea
+                        id="subreddits"
+                        class="rounded bg-transparent ring-1 ring-divider outline-none resize-none p-2"
+                        @input=${() => this.handleInput()}
+                        rows="5"
+                        placeholder="List of subreddits, one per line"
+                    >
+${this.subreddit?.subreddits.join("\n")}</textarea
+                    >
+                </div>
+                <button
+                    class="self-start btn ml-4"
+                    ?disabled=${this.label.length == 0 || this.subreddits.length == 0 || this.error}
+                    @click=${() => this.save()}
+                >
+                    Save
+                </button>
+                <div class="w-full border-b border-divider"></div>
+                <subreddit-search .filter=${filter} .itemButtons=${itemButtons}></subreddit-search>
+            </div>
+        </div>`;
+    }
+
+    handleInput(checkExists = true) {
+        const labelElement = this.querySelector<HTMLInputElement>("#label")!;
+        const subredditsElement = this.querySelector<HTMLTextAreaElement>("#subreddits")!;
+
+        this.label = labelElement.value;
+        this.subreddits = subredditsElement.value;
+
+        if (checkExists && this.label != this.subreddit?.label) {
+            if (Store.getSubreddits()!.some((subreddit) => subreddit.label == this.label)) {
+                this.error = `Subreddit with label '${this.label}' already exists`;
+            } else {
+                this.error = undefined;
+            }
+        }
+
+        const search = this.querySelector<SubredditSearchElement>("subreddit-search");
+        search?.handleSearch();
+    }
+
+    save() {
+        if (this.subreddit) {
+            this.subreddit.label = this.label;
+            this.subreddit.subreddits = this.subreddits.split("\n");
+            Store.setSubreddits(Store.getSubreddits()!);
+        } else {
+            const newSubreddit = { label: this.label, subreddits: this.subreddits.split("\n") };
+            Store.setSubreddits([...Store.getSubreddits()!, newSubreddit]);
+        }
+        state.update("subreddits", Store.getSubreddits()!);
+        router.pop();
     }
 }
