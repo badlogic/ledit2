@@ -561,7 +561,7 @@ export class RedditCommentsPage extends LitElement {
         super.firstUpdated(_changedProperties);
         this.load();
         if (this.postDom && lastPostBoundingRect && lastPostBoundingRect.top < 0) {
-            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? 0 : 0);
+            getScrollParent(this)!.scrollTop = -lastPostBoundingRect.top - (isMobileBrowser() && isSafariBrowser() ? 40 : 0);
         } else {
             getScrollParent(this)!.scrollTop = 0;
         }
@@ -620,7 +620,7 @@ export class RedditCommentsPage extends LitElement {
         }
         return html`<div class="${pageContainerStyle} -mt-4">
             ${renderTopbar("Comments", closeButton())} ${this.error ? renderError(this.error) : nothing}
-            <div class="${pageContentStyle}">
+            <div class="${pageContentStyle} min-h-screen">
                 ${this.postDom ? this.postDom.postDom : nothing}
                 ${!this.postDom && this.post
                     ? html`<reddit-post class="mt-4 pb-4 border-b border-divider" .post=${this.post}></reddit-post>`
