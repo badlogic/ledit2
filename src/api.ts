@@ -65,4 +65,14 @@ export class Api {
             return error("Couldn't proxy json request to " + url, e);
         }
     }
+
+    static async rss(urls: string[]): Promise<any | Error> {
+        try {
+            const response = await apiGet<any>("rss?" + urls.map((url) => "url=" + encodeURIComponent(url)).join("&"));
+            if (response instanceof Error) throw response;
+            return response;
+        } catch (e) {
+            return error("Couldn't get RSS feeds", e);
+        }
+    }
 }

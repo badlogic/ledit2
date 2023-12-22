@@ -386,8 +386,9 @@ export class RedditPostView extends LitElement {
                 // Make YouTube videos stop if they scroll out of frame.
                 if (embed.content.includes("youtube")) {
                     // Pause when out of view
-                    const videoElement = embedDom.querySelector("iframe") as HTMLIFrameElement;
-                    enableYoutubePause(videoElement);
+                    const iframe = embedDom.querySelector("iframe") as HTMLIFrameElement;
+                    iframe.setAttribute("allowfullscreen", "");
+                    enableYoutubePause(iframe);
                     return embedDom;
                 }
             } else {

@@ -7,6 +7,9 @@ services:
             LETSENCRYPT_EMAIL: badlogicgames@gmail.com
         networks:
             - reverse_proxy
+    db:
+        ports:
+            - 5432:10000
 networks:
     reverse_proxy:
         external:

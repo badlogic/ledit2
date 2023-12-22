@@ -1,4 +1,6 @@
 version: "3"
+volumes:
+    db_data:
 services:
     web:
         image: nginx:alpine
@@ -37,7 +39,7 @@ services:
             POSTGRES_USER: ledit_db_user
             POSTGRES_PASSWORD: ${LEDIT_DB_PASSWORD}
         volumes:
-            - ./data/postgres:/var/lib/postgresql/data
+            - db_data:/var/lib/postgresql/data
         networks:
             - network
 

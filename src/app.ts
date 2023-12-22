@@ -5,6 +5,7 @@ import { setupLiveReload } from "./utils/live-reload.js";
 import { renderError } from "./utils/ui-components.js";
 import { router } from "./utils/routing.js";
 import { RedditCommentsPage, RedditPage } from "./pages/reddit.js";
+import { Api } from "./api.js";
 export * from "./pages/index.js";
 export * from "./utils/ui-components.js";
 
@@ -61,5 +62,9 @@ export class App extends LitElement {
         router.setRootRoute("/");
         router.setNotFoundRoot("/404");
         router.replace(location.pathname);
+
+        (async () => {
+            console.log(await Api.rss(["https://www.theverge.com/rss/index.xml"]));
+        })();
     }
 }

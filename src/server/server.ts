@@ -8,7 +8,12 @@ import * as http from "http";
 import multer from "multer";
 import WebSocket, { WebSocketServer } from "ws";
 import { error, sleep } from "../utils/utils.js";
+import { FeedData, extract } from "@extractus/feed-extractor";
+import Parser from "rss-parser";
+import { DomNode, FormatOptions, RecursiveCallback, convert } from "html-to-text";
+import { BlockTextBuilder } from "html-to-text/lib/block-text-builder.js";
 import { Pool } from "pg";
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 const port = process.env.PORT ?? 3333;
@@ -64,6 +69,28 @@ const pool = new Pool({
             res.status(400).json(e);
         }
     });
+
+    app.get("/api/rss", async (req, res) => {
+        try {
+            const urls: string[] = [];
+            if (typeof req.query.url == "string") {
+                urls.push(req.query.url);
+            }
+            if (Array.isArray(req.query.url)) {
+                urls.push(...(req.query.url as string[]));
+            }
+            const promises: Promise<FeedItem[]>[] = [];
+            for (const url of urls) {
+                promises.push(fetchAndNormalizeFeed(url));
+            }
+            const responses = await Promise.all(promises);
+            res.json(responses);
+        } catch (e) {
+            error("Couldn't fetch rss " + req.query.url, e);
+            res.status(400).json(e);
+        }
+    });
+
     const server = http.createServer(app);
     server.listen(port, async () => {
         console.log(`App listening on port ${port}`);
@@ -92,6 +119,46 @@ async function connectWithRetry(maxRetries = 5, interval = 2000) {
             }
             await sleep(interval);
         }
+    }
+}
+
+type FeedItem = {
+    title: string;
+    link: string;
+    content: string;
+};
+
+async function fetchAndNormalizeFeed(url: string): Promise<FeedItem[]> {
+    try {
+        const response = await fetch(url);
+        const feedData = await response.text();
+        const parser = new Parser();
+        const feed = await parser.parseString(feedData);
+
+        const customFormat = (elem: DomNode, walk: RecursiveCallback, builder: BlockTextBuilder, formatOptions: FormatOptions) => {
+            walk(elem.children, builder);
+            return "";
+        };
+
+        return (feed.items || []).map((item) => ({
+            title: item.title || "",
+            link: item.link || "",
+            content: item.content
+                ? convert(item.content, {
+                      wordwrap: 130,
+                      formatters: {
+                          image: customFormat,
+                      },
+                  })
+                : item["content:encoded"]
+                ? convert(item["content:encoded"], { wordwrap: 130 })
+                : item.description
+                ? convert(item.description, { wordwrap: 130 })
+                : "",
+        }));
+    } catch (error) {
+        console.error("Error fetching or parsing feed:", error);
+        throw error;
     }
 }
 
