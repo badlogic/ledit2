@@ -1,0 +1,176 @@
+import { DomNode, FormatOptions, RecursiveCallback, convert } from "html-to-text";
+import { BlockTextBuilder } from "html-to-text/lib/block-text-builder.js";
+import { Pool } from "pg";
+import Parser from "rss-parser";
+
+export interface FeedItem {
+    id?: number;
+    title: string;
+    link: string;
+    content: string;
+    published: number; // UTC timestamp
+    feedUrl: string;
+}
+
+function cleanUpText(text: string): string {
+    return text.replace(/(\r?\n|\r){2,}/g, "\n\n");
+}
+
+export async function fetchAndNormalizeFeed(url: string): Promise<FeedItem[] | Error> {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) return new Error("Failed to fetch feed " + url + "\n" + (await response.text()));
+        const feedData = await response.text();
+        const parser = new Parser();
+        const feed = await parser.parseString(feedData);
+
+        const customFormat = (elem: DomNode, walk: RecursiveCallback, builder: BlockTextBuilder, formatOptions: FormatOptions) => {
+            walk(elem.children, builder);
+            return "";
+        };
+
+        const convertItem = (
+            item: {
+                [key: string]: any;
+            } & Parser.Item
+        ): FeedItem => {
+            let content = item.content
+                ? convert(item.content, {
+                      wordwrap: 130,
+                      formatters: {
+                          image: customFormat,
+                      },
+                  })
+                : item["content:encoded"]
+                ? convert(item["content:encoded"], { wordwrap: 130 })
+                : item.description
+                ? convert(item.description, { wordwrap: 130 })
+                : "";
+
+            content = content.replace(/(\r?\n|\r){2,}/g, "\n\n");
+            return {
+                title: item.title ?? "",
+                link: item.link ?? "",
+                content: content,
+                feedUrl: url,
+                published: new Date(item.pubDate ?? new Date().getTime()).getTime(),
+            };
+        };
+
+        return (feed.items || []).map((item) => convertItem(item)).filter((item) => item.title.length > 0 && item.link.length > 0);
+    } catch (error) {
+        console.log("Failed to fetch feed " + url, error);
+        return new Error("Failed to fetch feed " + url + (error instanceof Error ? "\n" + error.message : ""));
+    }
+}
+
+export class FeedDatabase {
+    private pool: Pool;
+    private pollInterval: number;
+
+    constructor(pool: Pool, pollIntervalSeconds: number = 60) {
+        this.pool = pool;
+        this.pollInterval = pollIntervalSeconds * 1000;
+    }
+
+    public async initialize(): Promise<void> {
+        await this.pool.query(`
+            CREATE TABLE IF NOT EXISTS feed_items (
+                id SERIAL PRIMARY KEY,
+                feed_url VARCHAR(255) NOT NULL,
+                title TEXT,
+                link TEXT UNIQUE NOT NULL,
+                content TEXT,
+                published TIMESTAMP,
+                CONSTRAINT unique_feed_item UNIQUE(feed_url, link)
+            )
+        `);
+
+        // Creating indices for faster query performance
+        await this.pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_feed_url ON feed_items (feed_url);
+        `);
+        // Index on the 'published' column for ordering by date
+        await this.pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_published ON feed_items (published);
+        `);
+        // Index on the 'id' column for keyset pagination
+        await this.pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_id ON feed_items (id);
+        `);
+    }
+
+    async addFeedItems(items: FeedItem[]): Promise<void> {
+        const query = `
+            INSERT INTO feed_items (feed_url, title, link, content, published)
+            VALUES ($1, $2, $3, $4, TO_TIMESTAMP($5))
+            ON CONFLICT (feed_url, link)
+            DO NOTHING
+        `;
+
+        for (const item of items) {
+            await this.pool.query(query, [item.feedUrl, item.title, item.link, item.content, item.published / 1000]);
+        }
+    }
+
+    async getFeedItems(urls: string[], limit: number, lastPublished?: number, lastId?: number): Promise<FeedItem[]> {
+        let query = `
+            SELECT id, feed_url, title, link, content, published
+            FROM feed_items
+            WHERE feed_url = ANY($1)
+        `;
+
+        const params: (string[] | Date | number)[] = [urls];
+
+        if (lastPublished && lastId) {
+            query += ` AND (published < $2 OR (published = $2 AND id < $3))`;
+            params.push(lastPublished, lastId);
+            query += `
+            ORDER BY published DESC, id DESC
+            LIMIT $4
+        `;
+        } else {
+            query += `
+            ORDER BY published DESC, id DESC
+            LIMIT $2
+        `;
+        }
+
+        params.push(limit);
+
+        const result = await this.pool.query(query, params);
+        return result.rows;
+    }
+
+    async hasFeedItems(urls: string[]): Promise<Map<string, boolean>> {
+        const query = `
+            SELECT DISTINCT feed_url
+            FROM feed_items
+            WHERE feed_url = ANY($1)
+        `;
+        const result = await this.pool.query(query, [urls]);
+
+        const hasItemsMap = new Map<string, boolean>();
+        urls.forEach((url) => hasItemsMap.set(url, false));
+        result.rows.forEach((row) => hasItemsMap.set(row.feed_url, true));
+
+        return hasItemsMap;
+    }
+
+    public async poll(): Promise<void> {
+        try {
+            const feedUrlsResult = await this.pool.query("SELECT DISTINCT feed_url FROM feed_items");
+            const feedUrls = feedUrlsResult.rows.map((row) => row.feed_url);
+
+            for (const url of feedUrls) {
+                const items = await fetchAndNormalizeFeed(url); // Define this function
+                if (items instanceof Error) throw items;
+                await this.addFeedItems(items.map((item) => ({ ...item, feedUrl: url })));
+            }
+        } catch (error) {
+            console.error("Error during polling:", error);
+        } finally {
+            setTimeout(() => this.poll(), this.pollInterval);
+        }
+    }
+}

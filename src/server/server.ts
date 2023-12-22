@@ -13,8 +13,7 @@ import Parser from "rss-parser";
 import { DomNode, FormatOptions, RecursiveCallback, convert } from "html-to-text";
 import { BlockTextBuilder } from "html-to-text/lib/block-text-builder.js";
 import { Pool } from "pg";
-
-const upload = multer({ storage: multer.memoryStorage() });
+import { FeedDatabase, fetchAndNormalizeFeed } from "./feed-database.js";
 
 const port = process.env.PORT ?? 3333;
 
@@ -52,6 +51,10 @@ const pool = new Pool({
         fs.mkdirSync("docker/data");
     }
 
+    const feedDb = new FeedDatabase(pool);
+    feedDb.initialize();
+    feedDb.poll();
+
     const app = express();
     app.set("json spaces", 2);
     app.use(cors());
@@ -72,22 +75,44 @@ const pool = new Pool({
 
     app.get("/api/rss", async (req, res) => {
         try {
-            const urls: string[] = [];
-            if (typeof req.query.url == "string") {
-                urls.push(req.query.url);
+            if (!req.query.url) {
+                throw new Error("Parameter 'url' is mandatory");
             }
-            if (Array.isArray(req.query.url)) {
-                urls.push(...(req.query.url as string[]));
-            }
-            const promises: Promise<FeedItem[]>[] = [];
+
+            const urls = Array.isArray(req.query.url) ? (req.query.url as string[]) : [req.query.url as string];
+            const lastPublished = req.query.lastPublished ? parseInt(req.query.lastPublished as string) : undefined;
+            const lastId = req.query.lastId ? parseInt(req.query.lastId as string) : undefined;
+            const limit = 25;
+
+            // Ensure all URLs have their latest items fetched and stored
+            const hasItemsMap = await feedDb.hasFeedItems(urls);
             for (const url of urls) {
-                promises.push(fetchAndNormalizeFeed(url));
+                if (!hasItemsMap.get(url)) {
+                    const newItems = await fetchAndNormalizeFeed(url);
+                    if (newItems instanceof Error) throw newItems;
+                    await feedDb.addFeedItems(newItems.map((item) => ({ ...item, feedUrl: url })));
+                }
             }
-            const responses = await Promise.all(promises);
-            res.json(responses);
+
+            // Fetch paginated items from the database
+            const items = await feedDb.getFeedItems(urls, limit, lastPublished, lastId);
+
+            let nextLastPublished: number | undefined = undefined,
+                nextLastId: number | undefined = 0;
+            if (items.length > 0) {
+                const lastItem = items[items.length - 1];
+                nextLastPublished = new Date(lastItem.published).getTime();
+                nextLastId = lastItem.id!;
+            }
+
+            res.json({
+                items,
+                nextLastPublished,
+                nextLastId,
+            });
         } catch (e) {
-            error("Couldn't fetch rss " + req.query.url, e);
-            res.status(400).json(e);
+            console.error("Error in /api/rss endpoint", e);
+            res.status(500).json({ error: "Internal Server Error" });
         }
     });
 
@@ -127,40 +152,6 @@ type FeedItem = {
     link: string;
     content: string;
 };
-
-async function fetchAndNormalizeFeed(url: string): Promise<FeedItem[]> {
-    try {
-        const response = await fetch(url);
-        const feedData = await response.text();
-        const parser = new Parser();
-        const feed = await parser.parseString(feedData);
-
-        const customFormat = (elem: DomNode, walk: RecursiveCallback, builder: BlockTextBuilder, formatOptions: FormatOptions) => {
-            walk(elem.children, builder);
-            return "";
-        };
-
-        return (feed.items || []).map((item) => ({
-            title: item.title || "",
-            link: item.link || "",
-            content: item.content
-                ? convert(item.content, {
-                      wordwrap: 130,
-                      formatters: {
-                          image: customFormat,
-                      },
-                  })
-                : item["content:encoded"]
-                ? convert(item["content:encoded"], { wordwrap: 130 })
-                : item.description
-                ? convert(item.description, { wordwrap: 130 })
-                : "",
-        }));
-    } catch (error) {
-        console.error("Error fetching or parsing feed:", error);
-        throw error;
-    }
-}
 
 function setupLiveReload(server: http.Server) {
     const wss = new WebSocketServer({ server });

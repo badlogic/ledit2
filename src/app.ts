@@ -64,7 +64,14 @@ export class App extends LitElement {
         router.replace(location.pathname);
 
         (async () => {
-            console.log(await Api.rss(["https://www.theverge.com/rss/index.xml"]));
+            console.log(
+                await Api.rss([
+                    "https://marioslab.io",
+                    "https://kurier.at/xml/rssd",
+                    "https://derstandard.at/rss",
+                    "https://www.theverge.com/rss/index.xml",
+                ])
+            );
         })();
     }
 }
