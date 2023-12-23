@@ -223,9 +223,10 @@ export class RssFeedEditor extends LitElement {
         super.connectedCallback();
         const params = router.getCurrentParams();
         if (params?.get("label")) {
-            const feed = Store.getRssFeeds()!.find((feed) => feed.label == params.get("label"));
+            const label = decodeURIComponent(params.get("label")!);
+            const feed = Store.getRssFeeds()!.find((feed) => feed.label == label);
             if (!feed) {
-                this.error = "Rss feed '" + params.get("label") + "' does not exist";
+                this.error = "Rss feed '" + label + "' does not exist";
             } else {
                 this.rssFeed = feed;
             }
