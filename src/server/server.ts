@@ -153,19 +153,28 @@ const pool = new Pool({
                 throw new Error("Parameter 'url' is mandatory");
             }
 
-            const urls = Array.isArray(req.query.url) ? (req.query.url as string[]) : [req.query.url as string];
+            const urls = (Array.isArray(req.query.url) ? (req.query.url as string[]) : [req.query.url as string]).map((url) => url.trim());
             const lastPublished = req.query.lastPublished ? parseInt(req.query.lastPublished as string) : undefined;
             const lastId = req.query.lastId ? parseInt(req.query.lastId as string) : undefined;
             const limit = 25;
 
             // Ensure all URLs have their latest items fetched and stored
             const hasItemsMap = await feedDb.hasFeedItems(urls);
+            const errorUrls: string[] = [];
             for (const url of urls) {
                 if (!hasItemsMap.get(url)) {
                     const newItems = await fetchAndNormalizeFeed(url);
-                    if (newItems instanceof Error) throw newItems;
-                    await feedDb.addFeedItems(newItems.map((item) => ({ ...item, feedUrl: url })));
+                    if (newItems instanceof Error) {
+                        errorUrls.push(url);
+                    } else {
+                        await feedDb.addFeedItems(newItems.map((item) => ({ ...item, feedUrl: url })));
+                    }
                 }
+            }
+
+            if (errorUrls.length > 0) {
+                res.status(400).json(errorUrls);
+                return;
             }
 
             // Fetch paginated items from the database

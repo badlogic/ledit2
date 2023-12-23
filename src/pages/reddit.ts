@@ -968,7 +968,8 @@ export class SubredditEditor extends LitElement {
                     <span class="text-muted-fg font-semibold text-sm">Subreddits</span>
                     <textarea
                         id="subreddits"
-                        class="rounded bg-transparent ring-1 ring-divider outline-none resize-none p-2"
+                        class="rounded bg-transparent ring-1 ring-divider outline-none resize-none p-2 overflow-x-auto"
+                        wrap="off"
                         @input=${() => this.handleInput()}
                         rows="5"
                         placeholder="List of subreddits, one per line"

@@ -5,7 +5,7 @@ import { closeButton, dom, fixLinksAndVideos, onVisibleOnce, renderError, render
 import { eyeOpenIcon, eyeClosedIcon } from "../utils/icons.js";
 import { pageContainerStyle, pageContentStyle } from "../utils/styles.js";
 import { StreamView } from "../utils/streamviews.js";
-import { Api, RssItem } from "../api.js";
+import { Api, RssError, RssItem } from "../api.js";
 import { RssFeed, Store } from "../utils/store.js";
 import { RssStream } from "../apis/rss.js";
 import { getTimeDifference } from "../utils/utils.js";
@@ -212,6 +212,9 @@ export class RssFeedEditor extends LitElement {
     @property()
     feeds = "";
 
+    @property()
+    isSaving = false;
+
     rssFeed?: RssFeed;
 
     protected createRenderRoot(): Element | ShadowRoot {
@@ -261,7 +264,8 @@ export class RssFeedEditor extends LitElement {
                     <span class="text-muted-fg font-semibold text-sm">RSS/Atom feeds</span>
                     <textarea
                         id="subreddits"
-                        class="rounded bg-transparent ring-1 ring-divider outline-none resize-none p-2"
+                        class="rounded bg-transparent ring-1 ring-divider outline-none resize-none p-2 overflow-x-auto"
+                        wrap="off"
                         @input=${() => this.handleInput()}
                         rows="5"
                         placeholder="List of RSS/Atom feed URLs, one per line"
@@ -269,13 +273,15 @@ export class RssFeedEditor extends LitElement {
 ${this.rssFeed?.feeds.join("\n")}</textarea
                     >
                 </div>
-                <button
-                    class="self-start btn ml-4"
-                    ?disabled=${this.label.length == 0 || this.feeds.length == 0 || this.error}
-                    @click=${() => this.save()}
-                >
-                    Save
-                </button>
+                ${!this.isSaving
+                    ? html`<button
+                          class="self-start btn ml-4"
+                          ?disabled=${this.label.length == 0 || this.feeds.length == 0 || this.error}
+                          @click=${() => this.save()}
+                      >
+                          Save
+                      </button>`
+                    : html`<loading-spinner></loading-spinner>`}
             </div>
         </div>`;
     }
@@ -287,25 +293,36 @@ ${this.rssFeed?.feeds.join("\n")}</textarea
         this.label = labelElement.value;
         this.feeds = subredditsElement.value;
 
+        this.error = undefined;
         if (checkExists && this.label != this.rssFeed?.label) {
             if (Store.getRssFeeds()!.some((feed) => feed.label == this.label)) {
                 this.error = `RSS/Atom feed with label '${this.label}' already exists`;
-            } else {
-                this.error = undefined;
             }
         }
     }
 
-    save() {
-        if (this.rssFeed) {
-            this.rssFeed.label = this.label;
-            this.rssFeed.feeds = this.feeds.split("\n");
-            Store.setSubreddits(Store.getSubreddits()!);
-        } else {
-            const newFeed = { label: this.label, feeds: this.feeds.split("\n") };
-            Store.setRssFeeds([...Store.getRssFeeds()!, newFeed]);
+    async save() {
+        this.isSaving = true;
+        this.requestUpdate();
+        try {
+            const result = await Api.rss(this.feeds.split("\n"));
+            if (result instanceof RssError) {
+                this.error = "Could not fetch RSS/Atom feeds\n" + result.errorUrls.join("\n");
+                return;
+            }
+
+            if (this.rssFeed) {
+                this.rssFeed.label = this.label;
+                this.rssFeed.feeds = this.feeds.split("\n");
+                Store.setRssFeeds(Store.getRssFeeds()!);
+            } else {
+                const newFeed = { label: this.label, feeds: this.feeds.split("\n") };
+                Store.setRssFeeds([...Store.getRssFeeds()!, newFeed]);
+            }
+            state.update("rssfeeds", Store.getRssFeeds()!);
+            router.pop();
+        } finally {
+            this.isSaving = false;
         }
-        state.update("rssfeeds", Store.getRssFeeds()!);
-        router.pop();
     }
 }

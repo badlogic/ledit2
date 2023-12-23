@@ -73,6 +73,12 @@ export type RssResult = {
     nextLastId: number;
 };
 
+export class RssError extends Error {
+    constructor(message: string, readonly errorUrls: string[]) {
+        super(message);
+    }
+}
+
 export class Api {
     static async proxyJson<T>(url: string, cursor?: string): Promise<T | Error> {
         try {
@@ -84,7 +90,7 @@ export class Api {
         }
     }
 
-    static async rss(urls: string[], cursor?: string): Promise<StreamPage<RssItem> | Error> {
+    static async rss(urls: string[], cursor?: string): Promise<StreamPage<RssItem> | RssError> {
         try {
             const lastPublished = cursor ? cursor.split("|")[0] : undefined;
             const lastId = cursor ? cursor.split("|")[1] : undefined;
@@ -93,11 +99,17 @@ export class Api {
                 urls.map((url) => "url=" + encodeURIComponent(url)).join("&") +
                 (lastPublished ? "&lastPublished=" + lastPublished : "") +
                 (lastId ? "&lastId=" + lastId : "");
-            const response = await apiGet<RssResult>(url);
-            if (response instanceof Error) throw response;
+
+            const result = await fetch(apiBaseUrl() + url);
+            if (!result.ok) {
+                const json = (await result.json()) as any;
+                return new RssError("Couldn't get all RSS feeds", json ?? []);
+            }
+            const response = (await result.json()) as RssResult;
             return { items: response.items, cursor: response.nextLastPublished + "|" + response.nextLastId };
         } catch (e) {
-            return error("Couldn't get RSS feeds", e);
+            console.log("Couldn't get RSS feeds", e);
+            return new RssError("Couldn't get all RSS feeds", []);
         }
     }
 
