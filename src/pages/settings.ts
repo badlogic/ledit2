@@ -45,7 +45,7 @@ export class SettingsPage extends LitElement {
                 </div>
                 <div class="px-4 mt-4 text-xs border-b border-divider pb-4">
                     Build: ${this.version?.date}<br />
-                    <a href="https://github.com/badlogic/ledit/commit/">${this.version?.commit}</a>
+                    <a href="https://github.com/badlogic/ledit2/commit/" target="_blank">${this.version?.commit}</a>
                 </div>
                 <div class="text-center text-xs italic my-4 pb-4 flex flex-col gap-4">
                     <div>
@@ -58,7 +58,7 @@ export class SettingsPage extends LitElement {
                         Viewing videos or images from 3rd parties, such as Reddit or YouTube,<br />
                         may result in you being tracked by these sites<br />
                     </div>
-                    <a href="https://github.com/badlogic/skychat" target="_blank">Source code</a>
+                    <a href="https://github.com/badlogic/ledit2" target="_blank">Source code</a>
                 </div>
             </div>
         </div>`;

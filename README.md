@@ -1,11 +1,12 @@
 # ledit2
 
-A read-only client for Reddit, Hackernews, lobst.rs, and RSS feeds.
+A read-only client for Reddit, Hackernews, lobst.rs, and RSS/Atom feeds.
 
 ### Development
 
 1. Install & run Docker
 2. Install NodeJS +19
+3. Set an environment variable called `LEDIT_DB_PASSWORD` to a password of your choice.
 
 ```
 npm run dev
