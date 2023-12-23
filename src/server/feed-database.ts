@@ -8,12 +8,9 @@ export interface FeedItem {
     title: string;
     link: string;
     content: string;
+    image: string;
     published: number; // UTC timestamp
     feedUrl: string;
-}
-
-function cleanUpText(text: string): string {
-    return text.replace(/(\r?\n|\r){2,}/g, "\n\n");
 }
 
 export async function fetchAndNormalizeFeed(url: string): Promise<FeedItem[] | Error> {
@@ -24,33 +21,56 @@ export async function fetchAndNormalizeFeed(url: string): Promise<FeedItem[] | E
         const parser = new Parser();
         const feed = await parser.parseString(feedData);
 
-        const customFormat = (elem: DomNode, walk: RecursiveCallback, builder: BlockTextBuilder, formatOptions: FormatOptions) => {
-            walk(elem.children, builder);
-            return "";
+        // Formatter to ignore content
+        const ignoreContent = () => "";
+
+        const formatLink = (elem: DomNode, walk: RecursiveCallback, builder: BlockTextBuilder, formatOptions: any) => {
+            if (elem.children && elem.children.length) {
+                walk(elem.children, builder);
+            }
+            // Add additional logic for link formatting if necessary
         };
 
+        let firstImageUrl = "";
+        const images: string[] = [];
+        const firstImage = (elem: DomNode, walk: RecursiveCallback, builder: BlockTextBuilder, formatOptions: any) => {
+            if (firstImageUrl.length == 0) firstImageUrl = elem.attribs.src;
+            images.push(elem.attribs.src);
+        };
+
+        const convertOptions = {
+            wordwrap: 130,
+            formatters: {
+                ignoreContent,
+                formatLink,
+                firstImage,
+            },
+            selectors: [
+                { selector: "figcaption", format: "ignoreContent" },
+                { selector: "img", format: "firstImage" },
+                { selector: "a", format: "formatLink" },
+            ],
+        };
         const convertItem = (
             item: {
                 [key: string]: any;
             } & Parser.Item
         ): FeedItem => {
+            firstImageUrl = "";
+            images.length = 0;
             let content = item.content
-                ? convert(item.content, {
-                      wordwrap: 130,
-                      formatters: {
-                          image: customFormat,
-                      },
-                  })
+                ? convert(item.content, convertOptions)
                 : item["content:encoded"]
-                ? convert(item["content:encoded"], { wordwrap: 130 })
+                ? convert(item["content:encoded"], convertOptions)
                 : item.description
-                ? convert(item.description, { wordwrap: 130 })
+                ? convert(item.description, convertOptions)
                 : "";
 
             content = content.replace(/(\r?\n|\r){2,}/g, "\n\n");
             return {
                 title: item.title ?? "",
                 link: item.link ?? "",
+                image: firstImageUrl ?? "",
                 content: content,
                 feedUrl: url,
                 published: new Date(item.pubDate ?? new Date().getTime()).getTime(),
@@ -68,7 +88,7 @@ export class FeedDatabase {
     private pool: Pool;
     private pollInterval: number;
 
-    constructor(pool: Pool, pollIntervalSeconds: number = 60) {
+    constructor(pool: Pool, pollIntervalSeconds: number = 60 * 15) {
         this.pool = pool;
         this.pollInterval = pollIntervalSeconds * 1000;
     }
@@ -77,10 +97,11 @@ export class FeedDatabase {
         await this.pool.query(`
             CREATE TABLE IF NOT EXISTS feed_items (
                 id SERIAL PRIMARY KEY,
-                feed_url VARCHAR(255) NOT NULL,
+                feed_url VARCHAR(1024) NOT NULL,
                 title TEXT,
-                link TEXT UNIQUE NOT NULL,
+                link TEXT NOT NULL,
                 content TEXT,
+                image TEXT,
                 published TIMESTAMP,
                 CONSTRAINT unique_feed_item UNIQUE(feed_url, link)
             )
@@ -102,20 +123,20 @@ export class FeedDatabase {
 
     async addFeedItems(items: FeedItem[]): Promise<void> {
         const query = `
-            INSERT INTO feed_items (feed_url, title, link, content, published)
-            VALUES ($1, $2, $3, $4, TO_TIMESTAMP($5))
+            INSERT INTO feed_items (feed_url, title, link, content, image, published)
+            VALUES ($1, $2, $3, $4, $5, TO_TIMESTAMP($6))
             ON CONFLICT (feed_url, link)
             DO NOTHING
         `;
 
         for (const item of items) {
-            await this.pool.query(query, [item.feedUrl, item.title, item.link, item.content, item.published / 1000]);
+            await this.pool.query(query, [item.feedUrl, item.title, item.link, item.content, item.image, item.published / 1000]);
         }
     }
 
     async getFeedItems(urls: string[], limit: number, lastPublished?: number, lastId?: number): Promise<FeedItem[]> {
         let query = `
-            SELECT id, feed_url, title, link, content, published
+            SELECT id, feed_url, title, link, content, image, published
             FROM feed_items
             WHERE feed_url = ANY($1)
         `;
@@ -123,7 +144,7 @@ export class FeedDatabase {
         const params: (string[] | Date | number)[] = [urls];
 
         if (lastPublished && lastId) {
-            query += ` AND (published < $2 OR (published = $2 AND id < $3))`;
+            query += ` AND (published < TO_TIMESTAMP($2) OR (published = TO_TIMESTAMP($2) AND id < $3))`;
             params.push(lastPublished, lastId);
             query += `
             ORDER BY published DESC, id DESC

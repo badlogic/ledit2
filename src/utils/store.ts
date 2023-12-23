@@ -9,11 +9,13 @@ export type SynologyPreferences = {
 export type Theme = "dark" | "light";
 
 export type Subreddit = { label: string; subreddits: string[] };
+export type RssFeed = { label: string; feeds: string[] };
 
 export type Settings = {
     theme: Theme;
     devPrefs: DevPreferences;
     subreddits: Subreddit[];
+    rssFeeds: RssFeed[];
     seen: string[];
     collapseSeen: boolean;
     usersClickable: boolean;
@@ -39,6 +41,18 @@ export class Store {
             { label: "programming", subreddits: ["programming", "programminglanguages"] },
             { label: "gifs", subreddits: ["gifs"] },
             { label: "videos", subreddits: ["videos"] },
+        ];
+
+        settings.rssFeeds = settings.rssFeeds ?? [
+            {
+                label: "tech",
+                feeds: [
+                    "https://www.theverge.com/rss/index.xml",
+                    "https://www.wired.com/feed/rss",
+                    "https://feeds.arstechnica.com/arstechnica/index",
+                    "https://techcrunch.com/feed/",
+                ],
+            },
         ];
 
         settings.seen = settings.seen ?? [];
@@ -96,6 +110,14 @@ export class Store {
 
     static setSubreddits(subreddits: Subreddit[]) {
         Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, subreddits });
+    }
+
+    static getRssFeeds() {
+        return Store.get<Settings>("settings")?.rssFeeds;
+    }
+
+    static setRssFeeds(feeds: RssFeed[]) {
+        Store.set<Settings>("settings", { ...Store.get<Settings>("settings")!, rssFeeds: feeds });
     }
 
     static seenSet = new Set<string>();

@@ -7,7 +7,7 @@ import { router } from "../utils/routing.js";
 import { pageContainerStyle, pageContentStyle } from "../utils/styles.js";
 import { favIcon, linkIcon, minusIcon, pencilIcon, plusIcon, searchIcon, settingsIcon } from "../utils/icons.js";
 import { map } from "lit/directives/map.js";
-import { Store, Subreddit } from "../utils/store.js";
+import { RssFeed, Store, Subreddit } from "../utils/store.js";
 import { state } from "../appstate.js";
 import { HackerNewsSorting } from "../apis/hackernews.js";
 import { RedditSubreddit } from "../apis/reddit.js";
@@ -25,17 +25,22 @@ export class MainPage extends LitElement {
         fixLinksAndVideos(this);
     }
 
-    unsubscribe = () => {};
+    unsubscribeReddit = () => {};
+    unsubscribeRss = () => {};
     connectedCallback(): void {
         super.connectedCallback();
-        this.unsubscribe = state.subscribe("subreddits", () => {
+        this.unsubscribeReddit = state.subscribe("subreddits", () => {
+            this.requestUpdate();
+        });
+        this.unsubscribeRss = state.subscribe("rssfeeds", () => {
             this.requestUpdate();
         });
     }
 
     disconnectedCallback(): void {
         super.disconnectedCallback();
-        this.unsubscribe();
+        this.unsubscribeReddit();
+        this.unsubscribeRss();
     }
 
     render() {
@@ -48,6 +53,7 @@ export class MainPage extends LitElement {
             { label: "Show Hackernews", value: "/hn/showstories" },
             { label: "Jobs", value: "/hn/jobstories" },
         ];
+        const rssFeeds = Store.getRssFeeds();
 
         const cardStyle = `flex flex-col border-t sm:border border-divider sm:rounded-md sm:fancy-shadow overflow-x-clip`;
         const cardTitleStyle = `text-muted-fg h-10 flex items-center pl-4 border-b border-divider`;
@@ -102,6 +108,30 @@ export class MainPage extends LitElement {
                             `
                         )}
                     </div>
+                    <div class="${cardStyle}">
+                        <h2 class="${cardTitleStyle}">
+                            <span>RSS/Atom</span>
+                            <button class="w-10 h-10 flex items-center justify-center" @click=${() => this.newRssFeed()}>
+                                <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
+                            </button>
+                        </h2>
+                        ${map(
+                            rssFeeds,
+                            (feed) => html`
+                                <div class="${cardItemStyle}">
+                                    <a class="flex-grow truncate py-2" href="/rss/${feed.feeds.map((url) => encodeURIComponent(url)).join("|")}"
+                                        >${feed.label}</a
+                                    >
+                                    <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.editRssFeed(feed)}>
+                                        <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
+                                    </button>
+                                    <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.deleteRssFeed(feed)}>
+                                        <i class="icon w-6 h-6 fill-primary">${minusIcon}</i>
+                                    </button>
+                                </div>
+                            `
+                        )}
+                    </div>
                 </div>
             </div>
         </div>`;
@@ -118,6 +148,19 @@ export class MainPage extends LitElement {
     deleteSubreddit(subreddit: Subreddit) {
         Store.setSubreddits(Store.getSubreddits()!.filter((other) => other != subreddit));
         state.update("subreddits", Store.getSubreddits()!);
+    }
+
+    newRssFeed() {
+        router.push("/new/rssfeed");
+    }
+
+    editRssFeed(rssFeed: RssFeed) {
+        router.push("/edit/rssfeed/" + encodeURIComponent(rssFeed.label));
+    }
+
+    deleteRssFeed(rssFeed: RssFeed) {
+        Store.setRssFeeds(Store.getRssFeeds()!.filter((other) => other != rssFeed));
+        state.update("rssfeeds", Store.getRssFeeds()!);
     }
 
     search() {

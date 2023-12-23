@@ -1,4 +1,6 @@
+import { FeedItem } from "./server/feed-database.js";
 import { JsonValue } from "./server/key-value-store.js";
+import { StreamPage } from "./utils/streams.js";
 import { error } from "./utils/utils.js";
 
 function apiBaseUrl() {
@@ -55,8 +57,24 @@ export function toUrlBody(params: JsonValue) {
     return urlParams;
 }
 
+export interface RssItem {
+    id: number;
+    title: string;
+    link: string;
+    content: string;
+    image: string;
+    published: string; // ISO date
+    feed_url: string;
+}
+
+export type RssResult = {
+    items: RssItem[];
+    nextLastPublished: number;
+    nextLastId: number;
+};
+
 export class Api {
-    static async proxyJson<T>(url: string): Promise<T | Error> {
+    static async proxyJson<T>(url: string, cursor?: string): Promise<T | Error> {
         try {
             const response = await apiGet<T>("json?url=" + encodeURIComponent(url));
             if (response instanceof Error) throw response;
@@ -66,13 +84,31 @@ export class Api {
         }
     }
 
-    static async rss(urls: string[]): Promise<any | Error> {
+    static async rss(urls: string[], cursor?: string): Promise<StreamPage<RssItem> | Error> {
         try {
-            const response = await apiGet<any>("rss?" + urls.map((url) => "url=" + encodeURIComponent(url)).join("&"));
+            const lastPublished = cursor ? cursor.split("|")[0] : undefined;
+            const lastId = cursor ? cursor.split("|")[1] : undefined;
+            const url =
+                "rss?" +
+                urls.map((url) => "url=" + encodeURIComponent(url)).join("&") +
+                (lastPublished ? "&lastPublished=" + lastPublished : "") +
+                (lastId ? "&lastId=" + lastId : "");
+            const response = await apiGet<RssResult>(url);
             if (response instanceof Error) throw response;
-            return response;
+            return { items: response.items, cursor: response.nextLastPublished + "|" + response.nextLastId };
         } catch (e) {
             return error("Couldn't get RSS feeds", e);
+        }
+    }
+
+    static async getFavIcons(domain: string) {
+        try {
+            const url = "favicon?domain=" + encodeURIComponent(domain);
+            const response = await apiGet<{ icons: string[] }>(url);
+            if (response instanceof Error) throw response;
+            return response.icons;
+        } catch (e) {
+            return error("Couldn't get favicons for " + domain, e);
         }
     }
 }

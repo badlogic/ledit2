@@ -66,7 +66,7 @@ export class HackerNewsPostView extends LitElement {
             router.push("/hn/comments/" + post.id);
         }}>
             <div class="flex flex-col">
-                <a href="${post.url}" class="${collapse ? "text-muted-fg" : ""} px-4 text-black dark:text-white font-semibold">${post.title}</a>
+                <a href="${post.url}" class="${collapse ? "text-muted-fg" : "text-black dark:text-white"} px-4 font-semibold">${post.title}</a>
                 <div class="px-4 flex text-xs text-muted-fg gap-1 break-word">
                     <span>${formatNumber(post.points)} pts</span>
                     <span>•</span>

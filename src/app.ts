@@ -59,19 +59,12 @@ export class App extends LitElement {
         router.addRoute("/hn/comments/:id", () => html`<hackernews-comments-page></hackernews-comments-page>`);
         router.addRoute("/hn/:sorting?", () => html`<hackernews-page></hackernews-page>`);
 
+        router.addRoute("/rss/:id", () => html`<rss-page></rss-page>`);
+        router.addRoute("/new/rssfeed", () => html`<rssfeed-editor></rssfeed-editor>`);
+        router.addRoute("/edit/rssfeed/:label", () => html`<rssfeed-editor></rssfeed-editor>`);
+
         router.setRootRoute("/");
         router.setNotFoundRoot("/404");
         router.replace(location.pathname);
-
-        (async () => {
-            console.log(
-                await Api.rss([
-                    "https://marioslab.io",
-                    "https://kurier.at/xml/rssd",
-                    "https://derstandard.at/rss",
-                    "https://www.theverge.com/rss/index.xml",
-                ])
-            );
-        })();
     }
 }
