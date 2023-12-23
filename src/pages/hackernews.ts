@@ -151,15 +151,17 @@ export class HackerNewsPage extends LitElement {
             { label: "Show", value: "showstories" },
             { label: "Jobs", value: "jobstories" },
         ];
-        const buttons = html`<select-box
-                class="pl-2 ml-auto rounded"
+        const buttons = html`<div class="ml-auto flex items-center -mr-2">
+            <select-box
+                class="pl-2 rounded"
                 .values=${sortValues}
                 .selected=${this.sorting}
                 .change=${(value: HackerNewsSorting) => (this.sorting = value)}
             ></select-box
             ><button class="-mr-2 w-10 h-10 flex items-center justify-center" @click=${() => (this.hideSeen = !this.hideSeen)}>
                 <i class="icon w-5 h-5">${!this.hideSeen ? eyeOpenIcon : eyeClosedIcon}</i>
-            </button>`;
+            </button>
+        </div>`;
 
         const stream = dom(
             html`<hackernews-stream-view .hideSeen=${this.hideSeen} .stream=${new HackerNewsStream(this.sorting)}></hackernews-stream-view>`

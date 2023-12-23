@@ -182,12 +182,11 @@ export class RssPage extends LitElement {
         const params = router.getCurrentParams();
         router.replaceUrl("/rss/" + params?.get("id"));
 
-        const buttons = html`<button
-            class="ml-auto -mr-2 w-10 h-10 flex items-center justify-center"
-            @click=${() => (this.hideSeen = !this.hideSeen)}
-        >
-            <i class="icon w-5 h-5">${!this.hideSeen ? eyeOpenIcon : eyeClosedIcon}</i>
-        </button>`;
+        const buttons = html`<div class="ml-auto flex items-center -mr-4">
+            <button class="w-10 h-10 flex items-center justify-center" @click=${() => (this.hideSeen = !this.hideSeen)}>
+                <i class="icon w-5 h-5">${!this.hideSeen ? eyeOpenIcon : eyeClosedIcon}</i>
+            </button>
+        </div>`;
 
         const id = decodeURIComponent(params?.get("id") ?? "");
         const feed = Store.getRssFeeds()?.find((feed) => feed.label == id || feed.feeds.join("|") == id);

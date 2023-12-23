@@ -508,15 +508,17 @@ export class RedditPage extends LitElement {
             { label: "Top year", value: "top-year" },
             { label: "Top all time", value: "top-alltime" },
         ];
-        const buttons = html`<select-box
-                class="pl-2 ml-auto rounded"
+        const buttons = html`<div class="flex items-center -mr-2">
+            <select-box
+                class="pl-2 ml-auto rounded whitespace-nowrap self-center"
                 .values=${sortValues}
                 .selected=${this.sorting}
                 .change=${(value: RedditSorting) => (this.sorting = value)}
             ></select-box
             ><button class="-mr-2 w-10 h-10 flex items-center justify-center" @click=${() => (this.hideSeen = !this.hideSeen)}>
                 <i class="icon w-5 h-5">${!this.hideSeen ? eyeOpenIcon : eyeClosedIcon}</i>
-            </button>`;
+            </button>
+        </div>`;
 
         const stream = dom(
             html`<reddit-stream-view .hideSeen=${this.hideSeen} .stream=${new RedditStream(this.subreddit, this.sorting)}></reddit-stream-view>`
@@ -868,7 +870,6 @@ export class SubredditSearchElement extends LitElement {
         const query = (this.querySelector<HTMLInputElement>("#search")?.value ?? "").trim();
         if (query.length == 0) {
             results.innerHTML = "";
-            router.replaceUrl("/search/reddit");
             return;
         }
 
@@ -932,6 +933,7 @@ export class SubredditEditor extends LitElement {
             const subreddits = this.querySelector<HTMLTextAreaElement>("#subreddits")!;
             subreddits.value += (subreddits.value.length > 0 ? "\n" : "") + view.subreddit.url.replace("/r/", "").replace("/", "");
             view.remove();
+            this.handleInput(false);
         };
 
         const itemButtons = (view: SubredditView) => {
@@ -1001,9 +1003,6 @@ ${this.subreddit?.subreddits.join("\n")}</textarea
                 this.error = undefined;
             }
         }
-
-        const search = this.querySelector<SubredditSearchElement>("subreddit-search");
-        search?.handleSearch();
     }
 
     save() {

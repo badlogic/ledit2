@@ -1,7 +1,7 @@
 {
     "name": "ledit",
     "short_name": "ledit",
-    "description": "A super duper media reading app",
+    "description": "A pretty good Reddit, Hackernews, and RSS/Atom feed reader app",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#111",
@@ -24,6 +24,92 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "img/main-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "Homescreen"
+        },
+        {
+            "src": "img/reddit-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "Reddit feed"
+        },
+        {
+            "src": "img/reddit-comments-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "Reddit comments"
+        },
+        {
+            "src": "img/editor-reddit-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "Reddit feed editor"
+        },
+        {
+            "src": "img/hackernews-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "Hackernews feed"
+        },
+        {
+            "src": "img/rss-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "RSS feed"
+        },
+        {
+            "src": "img/editor-rss-desktop.png",
+            "sizes": "2360x1640",
+            "form_factor": "wide",
+            "label": "RSS feed editor"
+        },
+        {
+            "src": "img/main-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "Homescreen"
+        },
+        {
+            "src": "img/reddit-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "Reddit feed"
+        },
+        {
+            "src": "img/reddit-comments-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "Reddit comments"
+        },
+        {
+            "src": "img/editor-reddit-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "Reddit feed editor"
+        },
+        {
+            "src": "img/hackernews-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "Hackernews feed"
+        },
+        {
+            "src": "img/rss-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "RSS feed"
+        },
+        {
+            "src": "img/editor-rss-mobile.png",
+            "sizes": "750x1334",
+            "form_factor": "narrow",
+            "label": "RSS feed editor"
         }
     ]
 }

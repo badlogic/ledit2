@@ -466,8 +466,8 @@ export class SelectBox<T> extends LitElement {
             const button = this.querySelector("button");
             this.popoutContainer = dom(
                 html`
-                    <div class="fixed top-0 left-0 w-full h-full">
-                        <div class="fixed flex flex-col rounded-md bg-muted focus:outline-none overflow-y-auto fancy-shadow mt-1">
+                    <div class="fixed top-0 left-0 w-full h-full z-10">
+                        <div class="z-10 fixed flex flex-col rounded-md bg-muted focus:outline-none overflow-y-auto fancy-shadow mt-1">
                             ${this.values.map(
                                 (item) =>
                                     html`<button @click="${() => this.handleSelect(item)}" class="px-4 py-2 text-left text-sm hover:text-primary">
