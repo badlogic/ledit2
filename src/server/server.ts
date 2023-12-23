@@ -69,11 +69,16 @@ const pool = new Pool({
         }
     });
 
+    const favIcons = new Map<string, string[]>();
     app.get("/api/favicon", async (req, res) => {
         try {
             const domain = req.query.domain as string;
             if (!domain) {
                 return res.status(400).send("Domain parameter is required");
+            }
+            if (favIcons.has(domain)) {
+                res.json({ icons: favIcons.get(domain)! });
+                return;
             }
 
             const protocol = "https://"; // or 'http://' depending on your requirement
@@ -133,8 +138,9 @@ const pool = new Pool({
 
             // Sort by size, descending
             const sortedFavicons = favicons.sort((a, b) => b.size - a.size);
-
-            res.json({ icons: sortedFavicons.map((favicon) => favicon.url) });
+            const urls = sortedFavicons.map((favicon) => favicon.url);
+            favIcons.set(domain, urls);
+            res.json({ icons: urls });
         } catch (error) {
             console.error(error);
             res.status(500).send("An error occurred while fetching favicons");
