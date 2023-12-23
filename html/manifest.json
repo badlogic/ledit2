@@ -3,6 +3,7 @@
     "short_name": "ledit",
     "description": "A pretty good Reddit, Hackernews, and RSS/Atom feed reader app",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#111",
     "theme_color": "#111",

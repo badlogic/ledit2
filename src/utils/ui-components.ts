@@ -671,6 +671,8 @@ export function renderPageShell(title: string, content: TemplateResult | HTMLEle
 }
 
 export function fixLinksAndVideos(container: HTMLElement, collapsed = false) {
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches;
+
     const links = container.querySelectorAll("a");
     if (links) {
         links.forEach((link) => {
@@ -680,8 +682,15 @@ export function fixLinksAndVideos(container: HTMLElement, collapsed = false) {
             }
 
             if (link.host != location.host) {
-                link.setAttribute("target", "_blank");
-                link.setAttribute("rel", "noopener noreferrer");
+                if (isPWA) {
+                    link.addEventListener("click", (ev) => {
+                        ev.preventDefault();
+                        window.open(link.href, "_blank");
+                    });
+                } else {
+                    link.setAttribute("target", "_blank");
+                    link.setAttribute("rel", "noopener noreferrer");
+                }
             } else {
                 link.addEventListener("click", (ev) => {
                     ev.preventDefault();
