@@ -508,7 +508,7 @@ export class RedditPage extends LitElement {
             { label: "Top year", value: "top-year" },
             { label: "Top all time", value: "top-alltime" },
         ];
-        const buttons = html`<div class="flex items-center -mr-2">
+        const buttons = html`<div class="flex items-center ml-auto -mr-2">
             <select-box
                 class="pl-2 ml-auto rounded whitespace-nowrap self-center"
                 .values=${sortValues}
