@@ -80,11 +80,15 @@ export class MainPage extends LitElement {
                                 <i class="icon w-6 h-6 fill-primary">${plusIcon}</i>
                             </button>
                         </h2>
-                        ${map(
-                            subreddits,
-                            (subreddit) => html`
+                        ${map(subreddits, (subreddit) => {
+                            let subs = [...subreddit.subreddits].sort(() => 0.5 - Math.random()).slice(0, 100);
+                            if (subs.length > 100) {
+                                subs = subs.sort(() => 0.5 - Math.random()).slice(0, 100);
+                            }
+
+                            return html`
                                 <div class="${cardItemStyle}">
-                                    <a class="flex-grow truncate py-2" href="/r/${subreddit.subreddits.join("+")}">${subreddit.label}</a>
+                                    <a class="flex-grow truncate py-2" href="/r/${subs.join("+")}">${subreddit.label}</a>
                                     <button class="ml-auto w-6 h-6 flex items-center justify-center" @click=${() => this.editSubreddit(subreddit)}>
                                         <i class="icon w-5 h-5 fill-primary">${pencilIcon}</i>
                                     </button>
@@ -92,8 +96,8 @@ export class MainPage extends LitElement {
                                         <i class="icon w-6 h-6 fill-primary">${minusIcon}</i>
                                     </button>
                                 </div>
-                            `
-                        )}
+                            `;
+                        })}
                     </div>
                     <div class="${cardStyle}">
                         <h2 class="${cardTitleStyle}">
