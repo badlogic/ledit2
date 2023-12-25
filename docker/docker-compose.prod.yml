@@ -9,7 +9,7 @@ services:
             - reverse_proxy
     db:
         ports:
-            - 5432:10000
+            - "127.0.0.1:5433:5432"
 networks:
     reverse_proxy:
         external:
