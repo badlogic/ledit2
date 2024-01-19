@@ -81,10 +81,11 @@ export class MainPage extends LitElement {
                             </button>
                         </h2>
                         ${map(subreddits, (subreddit) => {
-                            let subs = [...subreddit.subreddits].sort(() => 0.5 - Math.random()).slice(0, 100);
-                            if (subs.length > 100) {
-                                subs = subs.sort(() => 0.5 - Math.random()).slice(0, 100);
-                            }
+                            let subs = [...subreddit.subreddits]
+                                .map(value => ({value, sort: Math.random()}))
+                                .sort((a, b) => a.sort - b.sort)
+                                .map(({value}) => value)
+                                .slice(0, 100);
 
                             return html`
                                 <div class="${cardItemStyle}">
