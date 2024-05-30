@@ -8,9 +8,9 @@ function apiBaseUrl() {
     return location.href.includes("localhost") || location.href.includes("192.168.1") ? `http://${location.hostname}:3333/api/` : "/api/";
 }
 
-export async function apiGet<T>(endpoint: string) {
+export async function apiGet<T>(endpoint: string, base = apiBaseUrl()) {
     try {
-        const result = await fetch(apiBaseUrl() + endpoint);
+        const result = await fetch(base + endpoint);
         if (!result.ok) throw new Error();
         return (await result.json()) as T;
     } catch (e) {
