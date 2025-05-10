@@ -414,6 +414,57 @@ export class RedditPostView extends LitElement {
             const embed = post.secure_media_embed;
             const embedWidth = postsWidth;
             const embedHeight = Math.floor((embed.height / embed.width) * embedWidth);
+
+            // Handle YouTube embeds differently
+            if (embed.content.includes("youtube")) {
+                // Extract video ID from embed content
+                const videoId = embed.content.match(/\/embed\/([^?"]+)/)?.[1];
+                if (videoId) {
+                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                    const embedUrl = unescapeHtml(embed.content)!;
+
+                    const container = dom(html`
+                        <div class="md:px-4 w-full relative cursor-pointer" style="aspect-ratio: ${embedWidth}/${embedHeight};">
+                            <img src="${thumbnailUrl}" class="w-full h-full object-cover" />
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="w-16 h-12 bg-red-600 rounded-lg flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-white" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M8 5v14l11-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    `)[0];
+
+                    container.addEventListener('click', (ev) => {
+                        // Stop event propagation to prevent opening comments
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                        ev.stopImmediatePropagation();
+
+                        const iframe = dom(html`
+                            <div class="md:px-4 w-full" style="aspect-ratio: ${embedWidth}/${embedHeight};">
+                                <iframe
+                                    src="${unescapeHtml(embed.content.match(/src="([^"]+)"/)?.[1] ?? '')}"
+                                    class="w-full h-full"
+                                    allowfullscreen
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                ></iframe>
+                            </div>
+                        `)[0];
+
+                        // Make YouTube videos stop if they scroll out of frame
+                        const iframeElement = iframe.querySelector('iframe') as HTMLIFrameElement;
+                        enableYoutubePause(iframeElement);
+
+                        container.replaceWith(iframe);
+                    });
+
+                    return container;
+                }
+            }
+
+            // Handle non-YouTube embeds as before
             if (embed.content.includes("iframe")) {
                 const embedUrl = unescapeHtml(
                     embed.content
