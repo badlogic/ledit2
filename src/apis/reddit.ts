@@ -123,11 +123,9 @@ export class RedditStream extends Stream<RedditPost> {
                     sortParam +
                     "&" +
                     (cursor ? "after=" + cursor : "");
-
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(await response.text());
-                const page = await response.json() as RedditPosts;
-
+                const response = await Api.proxyJson<RedditPosts>(url);
+                if (response instanceof Error) throw response;
+                const page = response;
                 if (!page || !page.data || !page.data.children) throw new Error("No data in response");
                 const posts: RedditPost[] = [];
                 for (const post of page.data.children) {
