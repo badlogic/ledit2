@@ -98,25 +98,25 @@ export class VideoPlayer extends LitElement {
     loop = false;
 
     observer?: IntersectionObserver;
+
     disableAutoPause = false;
-    placeholder?: HTMLElement;
-    isUnloaded = false;
 
     protected createRenderRoot(): Element | ShadowRoot {
         return this;
     }
 
     updated() {
-        if (!this.isUnloaded) {
-            this.setupVideoPlayer();
+        const videoDiv = this.querySelector("video-js")! as HTMLElement;
+        if ((videoDiv as any).player) {
+            (videoDiv as any).player.dispose()(videoDiv as any).player = null;
         }
+        this.setupVideoPlayer();
     }
 
     setupVideoPlayer() {
         const videoDiv = this.querySelector("video-js")! as HTMLElement;
         if (!videoDiv) return;
         if ((videoDiv as any).player) return;
-
         const player = videojs(videoDiv, {});
         (videoDiv as any).player = player;
 
@@ -133,47 +133,16 @@ export class VideoPlayer extends LitElement {
             }
         };
         onTapped(this, togglePlay);
-
-        // Setup visibility observer to unload/reload video
-        this.observer = new IntersectionObserver(
-            (entries) => {
-                const entry = entries[0];
-                if (!entry.isIntersecting && !this.isUnloaded) {
-                    this.unloadVideo();
-                } else if (entry.isIntersecting && this.isUnloaded) {
-                    this.reloadVideo();
+        this.observer = onVisibilityChange(
+            this,
+            () => {},
+            () => {
+                if (this.disableAutoPause) return;
+                if (!player.paused()) {
+                    player.pause();
                 }
-            },
-            {
-                rootMargin: "50px 0px",
-                threshold: 0
             }
         );
-        this.observer.observe(this);
-    }
-
-    unloadVideo() {
-        const videoDiv = this.querySelector("video-js")! as HTMLElement;
-        if (!videoDiv) return;
-
-        // Create placeholder with same dimensions
-        this.placeholder = document.createElement("div");
-        this.placeholder.className = videoDiv.className;
-        this.placeholder.style.cssText = videoDiv.style.cssText;
-
-        // Dispose player and swap in placeholder
-        (videoDiv as any).player?.dispose();
-        videoDiv.remove();
-        this.append(this.placeholder);
-        this.isUnloaded = true;
-    }
-
-    reloadVideo() {
-        if (!this.placeholder) return;
-        this.placeholder.remove();
-        this.placeholder = undefined;
-        this.isUnloaded = false;
-        this.requestUpdate();
     }
 
     connectedCallback(): void {
@@ -182,16 +151,6 @@ export class VideoPlayer extends LitElement {
 
     render() {
         if (!this.videoDesc) return html`${nothing}`;
-
-        if (this.isUnloaded) {
-            return html`<div class="flex justify-center w-full cursor-pointer" style="position: relative; display: block;">
-                <div
-                    class="video-js w-full h-auto max-h-[70vh]"
-                    style="aspect-ratio: ${this.videoDesc.width / this.videoDesc.height};"
-                ></div>
-            </div>`;
-        }
-
         return dom(html`
             <div class="flex justify-center w-full cursor-pointer" style="position: relative; display: block;">
                 <video-js
@@ -209,8 +168,8 @@ export class VideoPlayer extends LitElement {
     }
 
     dispose() {
-        this.observer?.disconnect();
-        (this.querySelector("video-js") as any)?.player?.dispose();
+        this.observer?.unobserve(this);
+        (this.querySelector("video-js") as any)?.player.dispose();
     }
 }
 
