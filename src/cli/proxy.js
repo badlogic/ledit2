@@ -28,8 +28,19 @@ const server = http.createServer(async (req, res) => {
                 res.writeHead(404, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ error: await resp.text() }));
             } else {
-                res.writeHead(200, { "Content-Type": "application/json" });
-                res.end(JSON.stringify(await resp.json()));
+                res.writeHead(200, {
+                    "Content-Type": "application/json",
+                    "Transfer-Encoding": "chunked"
+                });
+                const reader = resp.body?.getReader();
+                if (reader) {
+                    while (true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        res.write(value);
+                    }
+                    res.end();
+                }
             }
         } catch (error) {
             res.writeHead(500, { "Content-Type": "application/json" });
