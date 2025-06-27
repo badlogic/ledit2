@@ -294,35 +294,7 @@ export class RedditPostView extends LitElement {
 
     renderContent(redditPost: RedditPost): TemplateResult | HTMLElement | undefined {
         const post = redditPost.data;
-
-        // Self post, show text, dim it, cap vertical size, and make it expand on click.
-        if (post.is_self) {
-            if (!post.selftext_html || post.selftext_html.trim().length == 0) return undefined;
-            const selfContent = dom(html`<div class="px-4 flex flex-col">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
-            onVisibleOnce(selfContent, () => {
-                const maxHeight = 150;
-                if (selfContent.clientHeight > 150) {
-                    const selfPost = selfContent.querySelector<HTMLElement>("#selfpost")!;
-                    selfPost.classList.add("overflow-hidden");
-                    selfPost.classList.add("text-muted-fg");
-                    selfPost.style.maxHeight = maxHeight + "px";
-                    const showMore = dom(
-                        html`<span class="text-primary text-center -mt-6 bg-[#fff]/70 dark:bg-[#111]/50 backdrop-blur-[8px]">Show more</span>`
-                    )[0];
-                    selfContent.append(showMore);
-                    let expanded = false;
-                    const expand = (ev: Event) => {
-                        ev.stopPropagation();
-                        selfPost.classList.toggle("text-muted-fg");
-                        showMore.classList.toggle("hidden");
-                        selfPost.style.maxHeight = !expanded ? "" : maxHeight + "px";
-                        expanded = !expanded;
-                    };
-                    selfContent.addEventListener("click", expand);
-                }
-            });
-            return selfContent;
-        }
+        const elements: (HTMLElement | TemplateResult)[] = [];
 
         const postsWidth = document.body.clientWidth > 640 ? 640 : document.body.clientWidth;
         const showGallery = (ev: Event, imageUrls: string[]) => {
@@ -356,8 +328,47 @@ export class RedditPostView extends LitElement {
                 <img class="md:px-4 max-h-[50vh]" src="${imageUrls[0]}" />
                 <div class="absolute left-0 bottom-0 disable-pointer-events text-xs p-2 bg-[#111]/80 text-white">${imageUrls.length} images</div>
             </div>`)[0];
-            return imgDom;
+            elements.push(imgDom);
         }
+
+        // Check for text content (can be present in both self posts and gallery posts)
+        if (post.selftext_html && post.selftext_html.trim().length > 0) {
+            const selfContent = dom(html`<div class="px-4 flex flex-col">${renderRedditTextContent(post.selftext_html)}</div>`)[0];
+            onVisibleOnce(selfContent, () => {
+                const maxHeight = 150;
+                if (selfContent.clientHeight > 150) {
+                    const selfPost = selfContent.querySelector<HTMLElement>("#selfpost")!;
+                    selfPost.classList.add("overflow-hidden");
+                    selfPost.classList.add("text-muted-fg");
+                    selfPost.style.maxHeight = maxHeight + "px";
+                    const showMore = dom(
+                        html`<span class="text-primary text-center -mt-6 bg-[#fff]/70 dark:bg-[#111]/50 backdrop-blur-[8px]">Show more</span>`
+                    )[0];
+                    selfContent.append(showMore);
+                    let expanded = false;
+                    const expand = (ev: Event) => {
+                        ev.stopPropagation();
+                        selfPost.classList.toggle("text-muted-fg");
+                        showMore.classList.toggle("hidden");
+                        selfPost.style.maxHeight = !expanded ? "" : maxHeight + "px";
+                        expanded = !expanded;
+                    };
+                    selfContent.addEventListener("click", expand);
+                }
+            });
+            elements.push(selfContent);
+        }
+
+        // If we have any elements, wrap them in a container if multiple, otherwise return single element
+        if (elements.length > 1) {
+            const container = dom(html`<div class="flex flex-col gap-4">${elements}</div>`)[0];
+            return container;
+        } else if (elements.length === 1) {
+            return elements[0];
+        }
+
+        // If we haven't returned yet, continue with the rest of the content types
+        // This handles cases where there's no text and no gallery
 
         // Reddit hosted video
         if (post.secure_media && post.secure_media.reddit_video) {
