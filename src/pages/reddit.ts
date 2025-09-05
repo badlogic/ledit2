@@ -24,7 +24,7 @@ import DOMPurify from "dompurify";
 import videojs from "video.js";
 import { Store, Subreddit } from "../utils/store.js";
 import { state } from "../appstate.js";
-import { Api, apiGet } from "../api.js";
+import { Api } from "../api.js";
 
 const postDomCache = new Map<string, HTMLElement>();
 let lastPostBoundingRect: DOMRect | undefined;
@@ -652,7 +652,7 @@ export class RedditCommentsPage extends LitElement {
     async load() {
         const commentsUrl = "https://www.reddit.com/" + this.permalink + ".json?limit=15000";
         try {
-            const data = await (await fetch(commentsUrl)).json() as any;
+            const data = await Api.proxyJson<any>(commentsUrl);
             if (data instanceof Error) throw data;
             if (data.length < 2) return new Error("Could not load comments for " + this.permalink);
             if (!data[0] || !data[0].data || !data[0].data.children || !data[0].data.children[0])

@@ -123,7 +123,7 @@ export class RedditStream extends Stream<RedditPost> {
                     sortParam +
                     "&" +
                     (cursor ? "after=" + cursor : "");
-                const response = await (await fetch(url)).json() as RedditPosts | Error;
+                const response = await Api.proxyJson<RedditPosts>(url);
                 if (response instanceof Error) throw response;
                 const page = response;
                 if (!page || !page.data || !page.data.children) throw new Error("No data in response");
@@ -197,3 +197,4 @@ export class RedditSearchStream extends Stream<RedditSubreddit> {
         return new Date(item.created_utc);
     }
 }
+

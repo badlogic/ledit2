@@ -46,9 +46,9 @@ export function toUrlBody(params: JsonValue) {
     for (const key in params) {
         const value = params[key];
         const type = typeof value;
-        if (type == "string" || type == "number" || type == "boolean") {
+        if (type === "string" || type === "number" || type === "boolean") {
             urlParams.append(key, value.toString());
-        } else if (typeof value == "object") {
+        } else if (typeof value === "object") {
             urlParams.append(key, JSON.stringify(value));
         } else {
             throw new Error("Unsupported value type: " + typeof value);
@@ -79,6 +79,7 @@ export class RssError extends Error {
     }
 }
 
+// biome-ignore lint/complexity/noStaticOnlyClass: fuck off
 export class Api {
     static async proxyJson<T>(url: string, cursor?: string): Promise<T | Error> {
         try {
