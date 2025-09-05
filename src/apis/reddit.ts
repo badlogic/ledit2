@@ -1,4 +1,4 @@
-import { Api } from "../api.js";
+import { Api, apiGet } from "../api.js";
 import { Stream } from "../utils/streams.js";
 import { error } from "../utils/utils.js";
 
@@ -123,7 +123,7 @@ export class RedditStream extends Stream<RedditPost> {
                     sortParam +
                     "&" +
                     (cursor ? "after=" + cursor : "");
-                const response = await Api.proxyJson<RedditPosts>(url);
+                const response = await (await fetch(url)).json() as RedditPosts | Error;
                 if (response instanceof Error) throw response;
                 const page = response;
                 if (!page || !page.data || !page.data.children) throw new Error("No data in response");
